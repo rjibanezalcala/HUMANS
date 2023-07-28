@@ -1,0 +1,34 @@
+
+{% extends 'trial.html' %}
+
+
+{% block content %}
+
+    <br>
+    <br>
+
+   {{trial_number}}.) {{question}}
+
+{% endblock %}
+
+{% block button %}
+
+    <div class='center'>
+    <form method = "post">
+    <div class = 'slider'>
+    <input type="range" min="0" value="50" max="100" name="response" list="vals"/>
+
+    <datalist id="vals">
+      <option value="0" label="n">no</option>
+      <option value="50" label="m">maybe</option>
+      <option value="100" label="y">yes </option>
+    </datalist>
+    </div>
+    <br> 
+
+    <input style="margin-left: 4em" type='submit' class='btn btn-primary'>
+    </form>
+    </div>
+
+
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<h3> You've finished the trials for this story! </h3>
+
+{% endblock %}
+
+{% block subheader %}
+
+<pad> <h2> After having thought about it more, would you like to change your initial preferences? </h2> </pad>
+
+{% endblock %}
+
+{% block content %}
+
+<div class = 'center2'>
+
+<nav>
+    <a style="margin-right: 15em" class="btn btn-success" href="{{url_for('rank_prefs_again',cost_or_reward='reward')}}"> Yes </a>
+</nav>
+
+<nav>
+    <a style="margin-left: 15em" class="btn btn-danger" href="{{url_for('get_story_relevance')}}"> No </a>
+</nav>
+
+
+</div>
+
+{% endblock %}
+
