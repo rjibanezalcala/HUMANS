@@ -145,10 +145,12 @@ def choose_stories():
     story_blurbs = get_blurbs()
 
     if request.method=="POST":
+
+        ## TODO: FIX THE NOT PREF STORIES
         prefs = request.form.to_dict()
         pref_stories = [int(k) for (k,v) in prefs.items() if v]
-        not_pref_stories = [int(k) for k in prefs.keys() if k not in pref_stories]
-        
+        not_pref_stories = [int(k) for k in range(1,total_number_of_stories+1) if k not in pref_stories]
+
         if len(pref_stories) < min_stories_to_choose:
             return render_template("choose_stories_try_again.html", story_blurbs=story_blurbs,num_blurbs=len(story_blurbs),prev_yes=pref_stories, min_stories_to_choose = min_stories_to_choose)
 
