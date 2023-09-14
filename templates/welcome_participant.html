@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %} <h2> Welcome! Are you a new participant?  </h2> {%endblock %}
+
+{% block content %}
+
+<div class = 'center2'>
+
+<nav>
+    <a class="btn btn-success" href="{{url_for('new_participant')}}"> Yes </a>
+</nav>
+
+<nav>
+    <a class="btn btn-danger" href="{{url_for('not_new_participant')}}"> No </a>
+</nav>
+
+
+</div>
+
+{% endblock %}

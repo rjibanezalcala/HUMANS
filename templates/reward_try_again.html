@@ -1,0 +1,42 @@
+{% extends 'try_again.html' %}
+
+{% block content %}
+
+<b> REWARD </b>
+
+<br> 
+
+<pad>
+From 0 to 100, where 0 is least and 100 is most, how <b>pleasant</b> are the following situations?
+</pad>
+
+{% endblock %}
+
+{% block qs %}
+<div class='center2'>
+	<form method="post">
+		<span class="instructions">When considering your preferences: <b>do not repeat values</b>, <b>values do not need to sum to 100</b>, <b>do evaluate preferences on an absolute (not relative) scale</b>.</span>
+		<br>
+		<br> 
+		<dl>
+		
+			{%for i in range(1, len+1)%}
+			<dt> <label for={{i}} class="pref-label"> ...{{opt_dict[i]}}? </label></dt>
+
+			<div class="slider slider-narrow">
+			Not pleasant <input type="range" min="0" max="100" value={{vals[i-1]}} name ={{i}} oninput="this.nextElementSibling.value = this.value"> Very pleasant :
+				<output>{{vals[i-1]}}</output>
+			</div>
+
+			{%endfor%}
+
+		</dl>
+
+		<input type='submit' class='btn btn-primary' formaction=>
+	</form>
+</div>
+
+
+{% endblock %}
+
+

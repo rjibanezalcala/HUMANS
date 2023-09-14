@@ -1,0 +1,39 @@
+{% extends 'base2.html' %}
+
+{% block header %}
+
+<div class='pad'> <h3> Please choose at least {{min_stories_to_choose}} topics which are (or could be) relevant to you. </h3> </div> 
+
+<h4> Whoops! You must select at least {{min_stories_to_choose}} options! </h4>
+
+{% endblock %}
+
+{% block content %}
+
+<div class='center2'>
+	<form method="post">
+		<div class='col'><ul>
+
+			{%for i in range(1, num_blurbs+1)%}
+			
+			<label for={{i}} class="form-control">
+				{%if i in prev_yes%}
+				<input type="checkbox" id={{i}} name={{i}} checked>
+				{%else%}
+				<input type='checkbox' id={{i}} name={{i}}>
+				{%endif%}
+				{{story_blurbs[i]}}
+			</label>
+			
+			{%endfor%}
+		</ul></div>
+
+	<br>
+	<input type="submit" class="btn btn-primary">
+	</form>
+</div>
+
+{%endblock %}
+
+
+

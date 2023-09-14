@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<h3> Thanks you for your contribution! You are done for the day. </h3> 
+
+{% endblock %}
+
+{% block content %}
+
+<div class="center2">
+	<form method="POST">
+	
+		<div class="personal-info" id="notes">
+			<label for="session-notes">Experimenter notes:</label>
+			<textarea name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!! Please write your notes in a single paragraph!"></textarea>
+			<!-- <input type="text" name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!"/> -->
+		</div>
+		
+		<input type="submit" class="btn btn-success" value="Finished!"/>
+		<!-- <nav>
+			<a class="btn btn-success" href="{{url_for('select_stories')}}"> Finished! </a>
+		</nav> -->
+		
+	</form>
+</div>
+
+</div>
+
+{% endblock %}

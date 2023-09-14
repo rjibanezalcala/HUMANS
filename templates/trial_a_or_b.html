@@ -1,0 +1,46 @@
+
+{% extends 'trial.html' %}
+
+
+{% block content %}
+
+    <br>
+    <br>
+   QUESTION NUMBER {{trial_number}}
+   
+<div class='center2'>
+	<table class="center">
+		<tr>
+			<th>Option A</th>
+			<th> </th>
+			<th>Option B</th>
+		</tr>
+		<tr>
+			<td>{{optn_a}}</td>
+			<td class='centered'> OR... </td>
+			<td>{{optn_b}}</td>
+		</tr>
+	</table>
+</div>
+
+{% endblock %}
+	<br>
+{% block button %}
+
+<div class='center2'>
+	<form method = "post">
+		<div class = 'slider'>
+			<input class="slider-narrow" type="range" min="0" value="50" max="100" name="response" list="vals"/>
+			<datalist id="vals">
+			  <option class="slider-option" value="0" label="n">A</option>
+			  <option class="slider-option" value="50" label="m">Undecided</option>
+			  <option class="slider-option" value="100" label="y">B</option>
+			</datalist>
+		</div>
+		<br> 
+
+		<input type='submit' class='btn btn-primary'>
+	</form>
+</div>
+
+{% endblock %}

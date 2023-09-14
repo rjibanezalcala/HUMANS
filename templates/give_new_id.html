@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<h3> Your participant ID is: {{participant_id}} </h3>
+
+{% endblock %}
+
+{% block subheader %}
+
+<h2> Please answer the following questions </h2>
+
+{% endblock %}
+
+{% block content %}
+
+<div class='center2'>
+	<form method="post">
+		<div class="personal-info" id="demographics">
+			<span class="instructions"></span>
+			
+			<label for="sex">Sex:</label> </dt>
+			<select name="sex" id="sex" title="The sex that was assigned to you at birth (required)." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="male">male</option>
+				<option class="select-option" value="female">female</option>
+				<option class="select-option" value="intersex">intersex</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+			<label for="genderid">Gender identity:</label>
+			<select name="genderid" id="genderid" title="What gender you identify as, regardless of birth sex (required)." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="male">male</option>
+				<option class="select-option" value="female">female</option>
+				<option class="select-option" value="non-binary">non-binary</option>
+				<option class="select-option" value="transgender male">transgender male</option>
+				<option class="select-option" value="transgender female">transgender female</option>
+				<option class="select-option" value="other">other</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+
+			<label for="menstruation">Last menstruation cycle:</label>
+			<select name="menstruation" id="menstruation" title="Please indicte when your last cycle ocurred." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="< 1week">Less than a week ago</option>
+				<option class="select-option" value="1week">About one week ago</option>
+				<option class="select-option" value="2weeks">About two weeks ago</option>
+				<option class="select-option" value="3weeks">About three weeks ago</option>
+				<option class="select-option" value="> 3weeks">More than three weeks ago</option>
+				<option class="select-option" value="N/A">Not applicable</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+			<label for="age">Age range:</label>
+			<select name="age" id="age" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="Under 18">Under 18</option>
+				<option class="select-option" value="18-25">18-25</option>
+				<option class="select-option" value="25-34">25-34</option>
+				<option class="select-option" value="35-44">35-44</option>
+				<option class="select-option" value="45-54">45-54</option>
+				<option class="select-option" value="55-64">55-64</option>
+				<option class="select-option" value="65+">65+</option>
+			</select>
+			
+			<label for="weight">Weight range:</label>
+			<select name="weight" id="weight" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="< 90lbs">Below 90lbs</option>
+				<option class="select-option" value="90-120lbs">90-120lbs</option>
+				<option class="select-option" value="120-150lbs">120-150lbs</option>
+				<option class="select-option" value="150-180lbs">150-180lbs</option>
+				<option class="select-option" value="180-210lbs">180-210lbs</option>
+				<option class="select-option" value="210-240lbs">210-240lbs</option>
+				<option class="select-option" value="> 240lbs">Above 240lbs</option>
+			</select>
+			
+			<!-- Taken from:
+			https://www.census.gov/topics/population/race/about.html#:~:text=OMB%20requires%20five%20minimum%20categories,Hawaiian%20or%20Other%20Pacific%20Islander.
+			-->
+			<label for="race">Race:</label>
+			<select name="race" id="race" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="white">White</option>
+				<option class="select-option" value="black or african american">Black or African American</option>
+				<option class="select-option" value="american indian or alaska native">American Indian or Alaska Native</option>
+				<option class="select-option" value="asian">Asian</option>
+				<option class="select-option" value="native hawaiian or pacific islander">Native Hawaiian or Other Pacific Islander</option>
+				<option class="select-option" value="unknown">I don't know</option>
+			</select>
+			
+			<label for="ethnicity">Ethnicity:</label>
+			<select name="ethnicity" id="ethnicity" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="hispanic/latino or spanish origin">Hispanic or Latino or Spanish Origin</option>
+				<option class="select-option" value="not hispanic/latino or spanish origin">Not Hispanic or Latino or Spanish Origin</option>
+				<option class="select-option" value="unknown">I don't know</option>
+			</select>
+			
+			<label for="relationship_status">Relationship Status:</label>
+			<select name="relationship_status" id="relationship_status" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="single">Single</option>
+				<option class="select-option" value="married">Married</option>
+				<option class="select-option" value="widowed">Widowed</option>
+				<option class="select-option" value="closed_relationship">Exclusive Relationship</option>
+				<option class="select-option" value="open_relationship">Open Relationship</option>
+				<option class="select-option" value="polyamorous">Polyamorous Relationship</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+			<label for="sexual_orientation">Sexual Orientation:</label>
+			<select name="sexual_orientation" id="sexual_orientation" title="Your sexual attraction, describes the sex/gender(s) you are generally attracted to in a partner (required)." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="homosexual">Gay or Lesbian (Homosexual)</option>
+				<option class="select-option" value="heterosexual">Straight (Heterosexual)</option>
+				<option class="select-option" value="bisexual">Bisexual</option>
+				<option class="select-option" value="pansexual">Pansexual</option>
+				<option class="select-option" value="asexual">Asexual (Regardless of romantic attraction)</option>
+				<option class="select-option" value="other">Other</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+		</div>
+		
+		<div class="personal-info" id="education">
+			<span class="instructions"></span>
+			
+			<label for="education">Academic classification:</label>
+			<select name="education" id="education" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="freshman">Freshman</option>
+				<option class="select-option" value="sophmore">Sophmore</option>
+				<option class="select-option" value="junior">Junior</option>
+				<option class="select-option" value="senior">Senior</option>
+				<option class="select-option" value="masters">Graduate (M.S.)</option>
+				<option class="select-option" value="doctorate">Graduate (Ph.D.)</option>
+				<option class="select-option" value="postdoctoral">Post-doctoral</option>
+				<option class="select-option" value="faculty/staff">Faculty/Staff</option>
+				<option class="select-option" value="N/A">Not applicable</option>
+			</select>
+			
+			<label for="college">College:</label>
+			<select name="college" id="college" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="education">College of Education</option>
+				<option class="select-option" value="engineering">College of Engineering</option>
+				<option class="select-option" value="health_sciences">College of Health Sciences</option>
+				<option class="select-option" value="liberal_arts">College of Liberal Arts</option>
+				<option class="select-option" value="nursing">College of Nursing</option>
+				<option class="select-option" value="pharmacy">School of Pharmacy</option>
+				<option class="select-option" value="science">College of Science</option>
+				<option class="select-option" value="business">College of Business</option>
+				<option class="select-option" value="extended">Extended University</option>
+				<option class="select-option" value="undecided">Undecided</option>
+				<option class="select-option" value="N/A">Not applicable</option>
+			</select>
+			
+			<label for="major">Major:</label>
+			<input type="text" name="major" id="major" placeholder="Write your college major!">
+			<!--
+			<label for="">:</label>
+			<select name="" id="" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			-->
+		</div>
+		
+		<div class="personal-info" id="lifestyle">
+			<span class="instructions"></span>
+			<label for="exercise">Exercise Frequency:</label>
+			<select name="exercise" id="exercise" title="Select how many times you normally exercise within a week." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="< once/week">Less than once a week</option>
+				<option class="select-option" value="once/week">Once a week</option>
+				<option class="select-option" value="2-3 times/week">2 to 3 times a week</option>
+				<option class="select-option" value="3-5 times/week">3 to 5 times a week</option>
+				<option class="select-option" value="5-7 times/week">5 to 7 times a week</option>
+			</select>
+			
+			<div class="slider">
+				<dt><label for="exercise_time_min">Typical minimum exercise time:</label></dt>
+			<!-- <select name="exercise_time" id="exercise_time" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="N/A">Not applicable</option>
+				<option class="select-option" value="< 30min">Less than 30 minutes</option>
+				<option class="select-option" value="30-40min">30 to 40 minutes</option>
+				<option class="select-option" value="40-50min">40-50 minutes</option>
+				<option class="select-option" value="50-60min">50 to 60 minutes</option>
+				<option class="select-option" value="> 60min">More than 60 minutes</option>
+			</select> -->
+				<span class="slider-min">0 minutes</span>
+				<span class="slider-max" style="margin-left: 10em">120 minutes</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" name="exercise_time_min" id="exercise_time_min" min="0" max="120" value="10" oninput="document.getElementById('exercise_time_min_value').value = this.value.concat(' minutes')" required />
+					<output id="exercise_time_min_value" class="range-output">10 minutes</output>
+		
+				<dt><label for="exercise_time_max">Typical maximum exercise time:</label></dt>
+				<span class="slider-min">0 minutes</span>
+				<span class="slider-max" style="margin-left: 10em">120 minutes</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" name="exercise_time_max" id="exercise_time_max" min="0" max="120" value="10" oninput="document.getElementById('exercise_time_max_value').value = this.value.concat(' minutes')" required />
+					<output id="exercise_time_max_value" class="range-output">10 minutes</output>
+			</div>
+			
+			<span class="instructions">Do you regularly consume coffee or other caffeinated drinks or products?</span>
+			<select name="caffeine" id="caffeine" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="none">No</option>
+				<option class="select-option" value="< once/week">Less than once a week (occasionally)</option>
+				<option class="select-option" value="once/week">Once a week</option>
+				<option class="select-option" value="2-3 times/week">2 to 3 times a week</option>
+				<option class="select-option" value="3-5 times/week">3 to 5 times a week</option>
+				<option class="select-option" value="5-7 times/week">5 to 7 times a week</option>
+				<option class="select-option" value="> 7 times/week">More than 7 times a week</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+			<span class="instructions">Do you use any nicotine products?</span>
+			<select name="nicotine" id="nicotine" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="none">No</option>
+				<option class="select-option" value="< once/week">Less than once a week (occasionally)</option>
+				<option class="select-option" value="once/week">Once a week</option>
+				<option class="select-option" value="2-3 times/week">2 to 3 times a week</option>
+				<option class="select-option" value="3-5 times/week">3 to 5 times a week</option>
+				<option class="select-option" value="5-7 times/week">5 to 7 times a week</option>
+				<option class="select-option" value="> 7 times/week">More than 7 times a week</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+			<span class="instructions">Do you regularly consume alcoholic beverages?</span>
+			<select name="alcohol" id="alcohol" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="none">No</option>
+				<option class="select-option" value="< once/week">Less than once a week (occasionally)</option>
+				<option class="select-option" value="once/week">Once a week</option>
+				<option class="select-option" value="2-3 times/week">2 to 3 times a week</option>
+				<option class="select-option" value="3-5 times/week">3 to 5 times a week</option>
+				<option class="select-option" value="5-7 times/week">5 to 7 times a week</option>
+				<option class="select-option" value="> 7 times/week">More than 7 times a week</option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select>
+			
+		</div>
+		
+		<div class="personal-info" id="interests">
+			<span class="instructions"></span>
+			
+<!-- 			<label for="">:</label>
+			<select name="" id="" title="" required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value=""></option>
+				<option class="select-option" value="undisclosed">prefer not to disclose</option>
+			</select> -->
+			
+			<span class="instructions">What categories of visual media do you typically watch? Select all that apply.</span>
+			<div class='col2'><ul>
+				<label for="check-horror" class="form-control-small">
+					<input id="check-horror" id="check-horror" type="checkbox" name="vis_media" value="horror">Horror
+				</label></br>
+				<label for="check-comedy" class="form-control-small">
+					<input id="check-comedy" id="check-comedy" type="checkbox" name="vis_media" value="comedy">Comedy
+				</label></br>
+				<label for="check-anime" class="form-control-small">
+					<input id="check-anime" id="check-anime" type="checkbox" name="vis_media" value="anime">Anime
+				</label></br>
+				<label for="check-news" class="form-control-small">
+					<input id="check-news" id="check-anime" type="checkbox" name="vis_media" value="news">News
+				</label></br>
+				<label for="check-sports" class="form-control-small">
+					<input id="check-sports" id="check-anime" type="checkbox" name="vis_media" value="sports">Sports
+				</label></br>
+				<label for="check-documentaries" class="form-control-small">
+					<input id="check-documentaries" id="check-anime" type="checkbox" name="vis_media" value="documentaries">Documentaries
+				</label></br>
+				<label for="check-gaming_stream" class="form-control-small">
+					<input id="check-gaming_stream" id="check-anime" type="checkbox" name="vis_media" value="gaming_stream">Gaming streams
+				</label></br>
+				<label for="check-drama" class="form-control-small">
+					<input id="check-drama" type="checkbox" name="vis_media" value="drama">Drama
+				</label></br>
+				<label for="check-action" class="form-control-small">
+					<input id="check-action" type="checkbox" name="vis_media" value="action">Action
+				</label></br>
+				<label for="check-fantasy" class="form-control-small">
+					<input id="check-fantasy" type="checkbox" name="vis_media" value="fantasy">Fantasy
+				</label></br>
+				<label for="check-musicals" class="form-control-small">
+					<input id="check-musicals" type="checkbox" name="vis_media" value="musicals">Musicals
+				</label></br>
+				<label for="check-stand-up" class="form-control-small">
+					<input id="check-stand-up" type="checkbox" name="vis_media" value="stand-up">Stand-up comedy
+				</label></br>
+				<label for="check-crime" class="form-control-small">
+					<input id="check-crime" type="checkbox" name="vis_media" value="crime">Crime shows
+				</label></br>
+				<label for="check-romance" class="form-control-small">
+					<input id="check-romance" type="checkbox" name="vis_media" value="romance">Romance
+				</label></br>
+				<label for="check-sci-fi" class="form-control-small">
+					<input id="check-sci-fi" type="checkbox" name="vis_media" value="sci-fi">Sci-fi
+				</label></br>
+				<label for="check-reality" class="form-control-small">
+					<input id="check-reality" type="checkbox" name="vis_media" value="reality">Reality shows
+				</label></br>
+				<label for="check-other1" class="form-control-small">
+					<input id="check-other1" type="checkbox" name="vis_media" value="other">Other
+				</label></br>
+			</div></ul>
+				
+			<span class="instructions">Do you have any hobbies? If so, what kind? Select all that apply.</span>
+			<div class='col2'><ul>
+				<label for="check-art" class="form-control-small">
+					<input id="check-art" type="checkbox" name="hobbies" value="art">Art
+				</label></br>
+				<label for="check-gaming" class="form-control-small">
+					<input id="check-gaming" type="checkbox" name="hobbies" value="gaming">Gaming
+				</label></br>
+				<label for="check-creative" class="form-control-small">
+					<input id="check-creative" type="checkbox" name="hobbies" value="creative">Creative
+				</label></br>
+				<label for="check-journalism" class="form-control-small">
+					<input id="check-journalism" type="checkbox" name="hobbies" value="journalism">Journalism
+				</label></br>
+				<label for="check-tinkering" class="form-control-small">
+					<input id="check-tinkering" type="checkbox" name="hobbies" value="tinkering">Tinkering
+				</label></br>
+				<label for="check-outdoors" class="form-control-small">
+					<input id="check-outdoors" type="checkbox" name="hobbies" value="outdoors">Outdoorsy
+				</label></br>
+				<label for="check-martial_arts" class="form-control-small">
+					<input id="check-martial_arts" type="checkbox" name="hobbies" value="martial_arts">Martial Arts
+				</label></br>
+				<label for="check-other2" class="form-control-small">
+					<input id="check-other2" type="checkbox" name="hobbies" value="other">Other
+				</label></br>
+			</div></ul>
+			  
+			
+		</div>
+
+		<input type="submit" class="btn btn-primary"/>
+	</form>
+</div>
+
+{%endblock %}
+
+
+

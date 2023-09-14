@@ -1,0 +1,40 @@
+{% extends 'try_again.html' %}
+
+{% block content %}
+
+<b> COST </b>
+
+<br>
+
+From 0 to 100, where 0 is least and 100 is most, how <b>unpleasant</b> would it be to have the following? 
+
+{% endblock %}
+
+{% block qs %}
+<div class='center2'>
+<form method="post">
+
+<br>
+<br> 
+<dl>
+{%for i in range(1, len+1)%}
+    <dt> <label for={{i}}> ...{{opt_dict[i]}}? </label></dt>
+
+    <div class="slider">
+    Not unpleasant <input type="range" min="0" max="100" value={{vals[i-1]}} name ={{i}} oninput="this.nextElementSibling.value = this.value"> Very unpleasant:
+    <output>{{vals[i-1]}}</output>
+    </div>
+    <br>
+
+{%endfor%}
+
+</dl>
+
+<!-- <input style="margin-left: 15em" type='submit' class='btn btn-primary' formaction=>
+ -->
+	<input type='submit' class='btn btn-primary' formaction=>
+</div>
+</form>
+
+{% endblock %}
+

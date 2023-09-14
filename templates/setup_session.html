@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block header %} <h3>How many stories do you wish to view in this session?</h3> {% endblock %}
+
+{% block subheader %}
+
+<h4>
+	{% if ALERT_FLAG %}
+	<p>ADMIN MESSAGE: REMEMBER TO CLOSE THE APP'S COMMAND WINDOW AND RESTART THE LOCAL WEB SERVER BEFORE THE NEXT SUBJECT BEGINS THEIR SESSION!!</p>
+	{% else %}
+	<p></p>
+	{% endif %}
+</h4>
+<br>
+
+<div class = 'center2'>
+	<form method = "POST">
+
+		<label form="text"></label>
+			<select class="custom-select" name="num_stories" title="The number of scenarios you wish to view this session (required)." required>
+				<option class="select-option" value="0" disabled selected >Number of stories:</option>
+				<option class="select-option" value="1">1</option>
+				<option class="select-option" value="3">3</option>
+				<option class="select-option" value="4">4</option>
+			</select>
+		<br> 
+		
+		<div class="personal-info" id="feeling">
+			<span class="instructions">Please answer the following on a scale from 0 to 10, where 0 is the least intense and 10 is the most:</span>
+			<div class = 'slider'>
+				<dt><label for="hunger">How hungry are you?</label></dt>
+				<span class="slider-min">0</span>
+				<span class="slider-max" style="margin-left: 18.4em">10</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" min="0" value="50" max="100" name="hunger" id="hunger" oninput="document.getElementById('hunger-value').value = this.value/10" />
+					<output id="hunger-value" class="range-output">5</output>
+
+
+				<dt><label for="tired">How tired are you?</label></dt>
+				<span class="slider-min">0</span>
+				<span class="slider-max" style="margin-left: 18.4em">10</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" min="0" value="50" max="100" name="tired" id='tired' oninput="document.getElementById('tired-value').value = this.value/10" />
+					<output id="tired-value" class="range-output">5</output>
+
+				<dt><label for="pain">Are you experiencing any pain?</label></dt>
+				<span class="slider-min">0</span>
+				<span class="slider-max" style="margin-left: 18.4em">10</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" min="0" value="50" max="100" name="pain" id='pain' oninput="document.getElementById('pain-value').value = this.value/10" />
+					<output id="pain-value" class="range-output">5</output>
+				
+				<dt><label for="stress">How stressed do you feel currently?</label></dt>
+				<span class="slider-min">0</span>
+				<span class="slider-max" style="margin-left: 18.4em">10</span>
+				<br class="invisible">
+				<input class="slider-wide" type="range" min="0" value="50" max="100" name="stress" id='stress' oninput="document.getElementById('stress-value').value = this.value/10" />
+					<output id="stress-value" class="range-output">5</output>
+				
+			</div>
+		</div>
+
+		<input type='submit' class='btn btn-primary'>
+	</form>
+</div>
+
+{% endblock %}
+
