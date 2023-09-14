@@ -1,0 +1,423 @@
+body {
+    background-color: #DBF9FC;
+    font-family: system-ui, sans-serif;
+}
+
+/*** Headers ***/
+h1 {
+    padding: 100px;
+    font-size:100px;
+    font-family: Arial, Arial, sans-serif;
+}
+
+h2 {
+    font-size:30px;
+    text-align:center;
+    font-family: Arial, Arial, sans-serif;
+}
+
+h3 {
+    font-size:40px;
+    text-align:center;
+    font-family: Arial, Arial, sans-serif;
+}
+
+h4 {
+    font-size:20px;
+    text-align:center;
+    color:red;
+    font-family: Arial, Arial, sans-serif;
+}
+
+h5 {
+    font-size:40px;
+    text-align:center;
+    padding:10px;
+    font-family: Arial, Arial, sans-serif;
+}
+
+h6 {
+    font-size:20px;
+    text-align:center;
+    font-family: Arial, Arial, sans-serif;
+}
+
+/*** General element styling ***/
+dt {
+  font-size: 1em;
+}
+
+dl {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    display: contents;
+    height: fit-content;
+}
+
+datalist {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  writing-mode: horizontal-tb;
+  width: 200px;
+}
+/* Tables */
+table, th, td {
+  border: none;
+  padding: 1em;
+  width: 60em;
+  height: fit-content;
+}
+
+th {
+  text-align: center;
+  font-size: 1.5em;
+}
+
+td {
+  text-align: center;
+}
+
+td.centered {
+  text-align: center;
+  font-weight: bolder;
+  font-style: oblique;
+}
+
+table.center {
+  margin-left: auto; 
+  margin-right: auto;
+}
+
+/* Extra */
+pad {
+  padding: 40px;
+}
+
+/*** Elements by class ***/
+.col {
+    column-count: 3;
+}
+
+.col2 {
+    column-count: 2;
+    column-gap: 0px;
+}
+
+.pad {
+    padding:60px;
+}
+
+.center {
+      display: grid;
+      justify-content: center;
+      align-items: center;
+      height: fit-content;
+      margin-top: 4em;
+    }
+
+.center2 {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* height: 400px; */
+      height: fit-child;
+    }
+
+.center3 {
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+      height: fit-content;
+    }
+	
+.instructions {
+  width: 325px;
+  margin-bottom: 1em;
+}
+
+.personal-info {
+  display: grid;
+  justify-content: center;
+  height: fit-content;
+  position: inherit;
+  margin-bottom: 3em;
+  padding-left: 50px;
+  padding-right: 50px;
+  padding-bottom: 20px;
+  padding-top: 10px;
+  border-style: dashed;
+  border-color: #00000021;
+  border-width: 1px;
+  border-radius: 10px;
+}
+
+.pref-label {
+  margin-top: 2.5em;
+}
+
+/*** Forms ***/
+form {
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  height: fit-content;
+  width: fit-content;
+  margin-top: 3em;
+}
+
+.form-control {
+  font-family: system-ui, sans-serif;
+  font-size: 1.5em;
+  font-weight: bold;
+  line-height: 1.1;
+  display: grid;
+  grid-template-columns: 1em auto;
+  gap: 0.5em;
+  margin-top: 0em;
+  background-color: #def8fc;
+  cursor: pointer;
+  align-content: center;
+}
+
+.form-control:hover{
+  background-color: #e6fcff;
+}
+
+.form-control + .form-control {
+  margin-top: 1em;
+}
+
+.form-control-small {
+  font-family: system-ui, sans-serif;
+  font-size: 1em;
+  font-weight: initial;
+  line-height: 1.1;
+  display: inline-grid;
+  grid-template-columns: 1em auto;
+  gap: 0.5em;
+  margin-top: 0em;
+  background-color: #def8fc;
+  cursor: pointer;
+  align-content: center;
+  /* For hover animations */
+  padding: 2px;
+  border-style: dotted;
+  border-width: 1px;
+  border-color: transparent;
+}
+
+.form-control-small:hover{
+  /*background-color: #e6fcff;*/
+  border-color:#00000099;
+}
+
+/*** UI Inputs ***/
+/* Range sliders */
+input[type="range"].slider-narrow {
+  width: 200px;
+  margin: 0;
+}
+
+input[type="range"].slider-wide {
+  width: 325px;
+  margin: 0;
+}
+
+/* Slider container */
+.slider {
+  align-content: center;
+  position: relative;
+}
+
+/* Slider labels */
+.range-output {
+  position: inherit;
+  display: grid;
+  text-align: center;
+  margin: 0;
+  margin-bottom: 10px;
+  -ms-transform: translate(0%, 0%);
+  transform: translate(0%, 0%);
+}
+
+.slider-min {
+  margin: 0;
+  text-align: left;
+  text-align: -webkit-left;
+}
+
+.slider-max {
+  text-align: right;
+  text-align: -webkit-right;
+}
+
+.slider-option {
+  color: inherit;
+  background-color: #d0d0d000;
+  text-align: center;
+  text-align: -webkit-center;
+}
+
+/* Buttons */
+.btn-primary {
+  /* Alignment */
+  margin: 0;
+  position: relative;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  /* Styling*/
+  font-family: system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: bold;
+  width: auto;
+  height: 2.5em;
+  background-color: #3a79fc;
+  border-radius: 5px 15px 5px 15px;
+  /* To keep at bottom of forms */
+  margin-top: 5em;
+}
+
+.btn-primary:hover{
+  background-color: #6799ff
+}
+
+.btn-success, .btn-danger {
+  /* Alignment */
+  margin: 0;
+  position: relative;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  /* To keep at bottom of forms */
+  margin-top: 5em;
+  /* Styling */
+  width: 6em;
+}
+
+nav + nav {
+  /* Spaces out the buttons in 'welcome_participant.html' */
+  margin-left: 6em;
+  margin-right: 0em;
+}
+
+/* Select boxes */
+select {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  /* Personalize */
+  width: 20em;
+  height: 3em;
+  padding: 0em 4em 0em 1em;
+  margin-bottom: 1.5em;
+  color: inherit;
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+.select-option {
+  color: inherit;
+  background-color: #d0d0d0;
+  text-align: left;
+  text-align: -webkit-left;
+}
+
+/* Text input boxes */
+input[type="text"] {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  /* Personalize */
+  width: 20em;
+  height: 3em;
+  padding: 0em 4em 0em 1em;
+  color: inherit;
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.2);
+  cursor: text;
+}
+
+#session-notes {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  /* Personalize */
+  padding: 0em 4em 0em 1em;
+  color: inherit;
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.2);
+  cursor: text;
+  
+  transition: width 0.4s ease-in-out;
+  inline-size: 20em;
+  overflow-wrap: break-word;
+}
+#session-notes:focus {
+  width: 50em;
+}
+
+/* Checkboxes */
+input[type="checkbox"] {
+  /* Hide default checkbox */
+  /* Add if not using autoprefixer */
+  -webkit-appearance: none;
+  appearance: none;
+  /* For iOS < 15 to remove gradient background */
+  background-color: #def8fc;
+  /* Not removed via appearance */
+  margin: 0;
+}
+
+input[type="checkbox"] {
+  background-color: #dbdada;
+  appearance: none;
+  margin: 0;
+  font: inherit;
+  color: currentColor;
+  width: 1.15em;
+  height: 1.15em;
+  transform: translateY(0.0em);
+  border: 0.1em dotted currentColor;
+  border-radius: 0.15em;
+  cursor: pointer;
+  
+  display: grid;
+  place-content: center;
+}
+
+/* On mouse-over, add a grey background color */
+input[type="checkbox"]:hover{
+  background-color: #eee;
+}
+
+/* Add a checkmark that is scaled to 0 while the box is not checked */
+input[type=checkbox]::before {
+  content: '✓';
+  color: white;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+}
+
+/* What to do between as box is being checked */
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+/* When the checkbox is checked, add a blue background and change border */
+input[type="checkbox"]:checked{
+  background-color: #3a79fc;
+  border: 0.1em solid currentColor;
+  border-radius: 0.15em;
+}
