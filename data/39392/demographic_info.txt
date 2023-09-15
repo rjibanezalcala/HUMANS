@@ -1,5 +1,0 @@
-sex: male
-age: Under 18
-hunger: 50
-tired: 50
-pain: 50
