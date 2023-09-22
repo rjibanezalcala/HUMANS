@@ -17,6 +17,7 @@ import pytz
 import sys
 from configparser import ConfigParser as cfgp
 from eyetracker_lib import EyeTracker
+from heartrate_lib import HRMonitorThread
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -809,6 +810,7 @@ def reset_user_params():
                         'caffeine':None,'nicotine':None,'alcohol':None,'vis_media':None,\
                         'hobbies':None,'next_story_index':current_story_indx,\
                         'eye_tracker_data':{'gaze_data':None,'eye_openness_data':None,'user_position_data':None},\
+                        'heart_rate_data':[],\
                         'pref_stories':None,'story_order':None}
     cost_prefs = []
     reward_prefs = []
@@ -819,6 +821,37 @@ def reset_user_params():
     
     print("\nUser parameters were reset!")
     return True
+
+def start_hr_monitor(**args):
+    emulate_hr = args.get('emulate_hr', False)
+    as_daemon = args.get('as_daemon', False)
+    verbose = args.get('verbose', False)
+    try:
+        print("\nStarting HR monitor thread!\n")
+        t = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose) # Declare thread wrapper and start thread
+        print("\nWaiting for device to be active...\n")
+        while not t.check_flags_status('active'):
+            time.sleep(0.3)
+        
+    except KeyboardInterrupt:
+        print("\nKeyboard interrupt detected, stopping thread before exiting main process...\n")
+        t.set_flag(stop=True)
+        return None
+    else:
+        print("\nContinuing...\n")
+        return t
+
+def stop_hr_monitor(thr):
+    data = None
+    try:
+        print("\nAttempting to stop thread...\n")
+        thr.set_flag(stop=True)
+        print("\nWaiting for thread to stop, retreiving data, and exiting...\n")
+        data = thr.join()
+    except Exception:
+        raise
+    finally:
+        return data
     
 
 # -----------------------------------------------------------------------------
@@ -897,6 +930,7 @@ participant_data = {'session_notes':'','num_stories':stories_in_session,'hunger'
                     'caffeine':None,'nicotine':None,'alcohol':None,'vis_media':None,\
                     'hobbies':None,'next_story_index':current_story_indx,\
                     'eye_tracker_data':{'gaze_data':None,'eye_openness_data':None,'user_position_data':None},\
+                    'heart_rate_data':[],\
                     'pref_stories':None,'story_order':None}
 trial_start = None 
 trial_end = None 
@@ -944,8 +978,8 @@ def select_stories():
 def welcome_participant():
     print("\nCalling eye tracker manager to initiate calibration!\n")
     # Open the heart rate monitor program (non-blocking)
-    if hr_settings['use_hrtracker']:
-        hr_monitor = subprocess.Popen(hr_settings['pulsemonitor_install_path'])
+    # if hr_settings['use_hrtracker']:
+        # hr_monitor = subprocess.Popen(hr_settings['pulsemonitor_install_path'])
     # Open eye tracker manager (blocking)
     if EYE_TRACKER_STATUS:
         eyetracker.call_eye_tracker_manager()
@@ -978,7 +1012,8 @@ def choose_stories():
     global STO_CH
     # story_blurbs = get_blurbs()
     story_blurbs = get_blurbs(story_relations)
-    
+    # Empty story order in case the user backtracks through the windows.
+    # story_order = []
     if request.method=="POST":
 
         prefs = request.form.to_dict()
@@ -1186,7 +1221,23 @@ def trial_html(loc_trial_num):
     global trial_start
     global trial_end
     global current_question
+            
+    tup, q = relevant_questions[trial_num-1]
 
+    # trial_start = time.gmtime()
+    # Changing this to a datetime timestamp with timezone data to get
+    # microsecond precision and be able to track when timestamps were made.
+    trial_start = timezone.localize(datetime.datetime.now())
+    current_question = tup
+    
+    # Start collecting eye tracker data
+    if EYE_TRACKER_STATUS:
+        eyetracker.subscribe(to=eye_settings['subscriptions'])
+    
+    if hr_settings['use_hrtracker']:
+        hr_monitor = start_hr_monitor()
+        hr_data = []
+    
     if request.method == "POST":
         data = request.form.to_dict()
         vals = list(data.values())
@@ -1198,6 +1249,10 @@ def trial_html(loc_trial_num):
         # Stop collecting eye tracker data before uploading data
         if EYE_TRACKER_STATUS:
             eyetracker.unsubscribe(frm=eye_settings['subscriptions'])
+        # Stop collecting hr data before uploading data
+        if hr_settings['use_hrtracker']:
+            hr_data = stop_hr_monitor(hr_monitor)
+            participant_data.update({'heart_rate_data': hr_data})
         if app_settings['data_upload']:
             write_trial_to_db(current_question, dec, trial_start, trial_end, exclude_keys=['num_stories'])
                 
@@ -1214,18 +1269,6 @@ def trial_html(loc_trial_num):
             replace_demdata(participant_id, {'next_story_index':current_story_indx}, make_backup=False)
             trial_num = 0
             return redirect('/want_change_prefs')
-            
-    tup, q = relevant_questions[trial_num-1]
-
-    # trial_start = time.gmtime()
-    # Changing this to a datetime timestamp with timezone data to get
-    # microsecond precision and be able to track when timestamps were made.
-    trial_start = timezone.localize(datetime.datetime.now())
-    current_question = tup
-    
-    # Start collecting eye tracker data
-    if EYE_TRACKER_STATUS:
-        eyetracker.subscribe(to=eye_settings['subscriptions'])
     
     task_type = story_num_overall.split('/')[1]
     if task_type in ['multi_choice', 'benefit_benefit', 'cost_cost']:
