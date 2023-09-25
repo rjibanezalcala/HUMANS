@@ -826,32 +826,69 @@ def start_hr_monitor(**args):
     emulate_hr = args.get('emulate_hr', False)
     as_daemon = args.get('as_daemon', False)
     verbose = args.get('verbose', False)
+    t = args.get('thread', initialise_device('hrtracker', emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose))
+
     try:
-        print("\nStarting HR monitor thread!\n")
-        t = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose) # Declare thread wrapper and start thread
-        print("\nWaiting for device to be active...\n")
+        print("\n[MAIN] Starting HR monitor thread!\n")
+        t.start_thread()
+        print("\n[MAIN] Waiting for device to be active...\n")
         while not t.check_flags_status('active'):
             time.sleep(0.3)
         
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt detected, stopping thread before exiting main process...\n")
+        print("\n[MAIN] Keyboard interrupt detected, stopping thread before exiting main process...\n")
         t.set_flag(stop=True)
         return None
     else:
-        print("\nContinuing...\n")
+        print("\n[MAIN] Continuing...\n")
         return t
 
 def stop_hr_monitor(thr):
     data = None
     try:
-        print("\nAttempting to stop thread...\n")
+        print("\n[MAIN] Attempting to stop thread...\n")
         thr.set_flag(stop=True)
-        print("\nWaiting for thread to stop, retreiving data, and exiting...\n")
+        print("\n[MAIN] Waiting for thread to stop, retreiving data, and exiting...\n")
         data = thr.join()
     except Exception:
         raise
     finally:
         return data
+    
+def initialise_device(d, **kwargs):
+    emulate_hr = kwargs.get('emulate_hr', False)
+    as_daemon = kwargs.get('as_daemon', False)
+    verbose = kwargs.get('verbose', False)
+    if d == 'eyetracker':
+        global EYE_TRACKER_STATUS
+        device = EyeTracker(manager_install_path=eye_settings['manager_install_path'])
+        try:
+            device.connect_eyetracker(eye_settings['eyetracker_index'])
+        except Exception as error:
+            print(f"\nCould not connect to eye tracker due to error: {error}")
+            answer = input(f"\nNo eye trackers were found in the network but 'use_eyetracker' was set to {eye_settings['use_eyetracker']} in settings.\nDo you wish to continue?\n(Y/N) >> ")
+            if answer.lower().startswith("y"):
+                print("\nDisabling eye tracker and continuing session...")
+            elif answer.lower().startswith("n"):
+                print("\nStopping app and closing the web server. See you later!\n")
+                sys.exit()
+        else:
+            EYE_TRACKER_STATUS = 1
+
+    elif d == 'hrtracker':
+        global HR_TRACKER_STATUS
+        try:
+            device = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose) # Declare thread wrapper and start thread
+        except Exception as error:
+            print(f"\nCould not initialise heart rate monitor thread. Exception raised: {error}")
+        else:
+            HR_TRACKER_STATUS = 1
+    
+    else:
+        print("\nNo device to initialise!")
+        device = None
+    
+    return device
     
 
 # -----------------------------------------------------------------------------
@@ -869,6 +906,7 @@ STO_CH = 0  # Flag that indicates that story order had to be changed.
 NEED_RESET = 0 # Flag to reset all global parameters for consecutive users.
 CREATE_DATA_TABLE = 0
 EYE_TRACKER_STATUS = 0
+HR_TRACKER_STATUS = 0
 
 # These are not changed throughout the server's lifetime.
 topics = []           # Existing topics.
@@ -882,22 +920,26 @@ eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True
 hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 timezone = pytz.timezone(app_settings.get('timestamp_timezone', 'UTC'))
 
-# Initialise eye tracker
-eyetracker = EyeTracker(manager_install_path=eye_settings['manager_install_path'])
+# Initialise biometrics hardware
 if eye_settings['use_eyetracker']:
+    eyetracker = initialise_device('eyetracker')
+if hr_settings['use_hrtracker']:
+    #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
+    print(f"\nDetected 'use_hrtracker' as {hr_settings['use_hrtracker']} in settings!\n  Please wait while I test that the device can be connected to...")
     try:
-        eyetracker.connect_eyetracker(eye_settings['eyetracker_index'])
+        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
+        time.sleep(3)
+        print(stop_hr_monitor(hr_monitor))
     except Exception as error:
-        print(f"Could not connect to eye tracker due to error: {error}")
-        answer = input(f"\nNo eye trackers were found in the network but 'use_eyetracker' was set to {eye_settings['use_eyetracker']} in settings.\nDo you wish to continue?\n(Y/N) >> ")
+        print(f"\nCould not connect to heart rate monitor device. Please ensure that the ANT+ antenna is pluggled into the computer!\nError raised: {error}")
+        answer = input(f"\nNo heart rate monitors were found in the network but 'use_hrtracker' was set to {hr_settings['use_hrtracker']} in settings.\nDo you wish to continue?\n(Y/N) >> ")
         if answer.lower().startswith("y"):
-            print("\nDisabling eye tracker and continuing session...")
+            print("\nDisabling heart rate tracker and continuing session...")
+            HR_TRACKER_STATUS = 0
         elif answer.lower().startswith("n"):
             print("\nStopping app and closing the web server. See you later!\n")
             sys.exit()
-    else:
-        EYE_TRACKER_STATUS = 1
-
+    
 # Check if target data table exists in the database:
 if (not exists(app_settings['data_table'])) and app_settings['auto_create_table']:
     CREATE_DATA_TABLE = 1
@@ -976,7 +1018,25 @@ def select_stories():
 
 @app.route('/welcome')
 def welcome_participant():
+    global eye_settings
+    global eyetracker
+    global hr_settings
+    global hrtracker
     print("\nCalling eye tracker manager to initiate calibration!\n")
+    # Re-check app settings to see if biometric devices will be used
+    new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
+    new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
+    
+    if new_eye_settings != eye_settings:
+        print("\nEye tracker settings were changes from last session! Reinitialising eye tracker with new settings.")
+        eye_settings.update(new_eye_settings)
+        if eye_settings['use_eyetracker']:
+            eyetracker = initialise_device('eyetracker')
+    
+    if new_hr_settings != hr_settings:
+        print("\nHeart rate tracker settings were changes from last session! New settings will be used upon initialisation of heart rate monitoring thread.")
+        hr_settings.update(new_hr_settings)
+            
     # Open the heart rate monitor program (non-blocking)
     # if hr_settings['use_hrtracker']:
         # hr_monitor = subprocess.Popen(hr_settings['pulsemonitor_install_path'])
@@ -1221,6 +1281,7 @@ def trial_html(loc_trial_num):
     global trial_start
     global trial_end
     global current_question
+    global participant_data
             
     tup, q = relevant_questions[trial_num-1]
 
@@ -1234,9 +1295,10 @@ def trial_html(loc_trial_num):
     if EYE_TRACKER_STATUS:
         eyetracker.subscribe(to=eye_settings['subscriptions'])
     
-    if hr_settings['use_hrtracker']:
-        hr_monitor = start_hr_monitor()
+    if HR_TRACKER_STATUS:
         hr_data = []
+        #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
+        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
     
     if request.method == "POST":
         data = request.form.to_dict()
@@ -1250,7 +1312,7 @@ def trial_html(loc_trial_num):
         if EYE_TRACKER_STATUS:
             eyetracker.unsubscribe(frm=eye_settings['subscriptions'])
         # Stop collecting hr data before uploading data
-        if hr_settings['use_hrtracker']:
+        if HR_TRACKER_STATUS:
             hr_data = stop_hr_monitor(hr_monitor)
             participant_data.update({'heart_rate_data': hr_data})
         if app_settings['data_upload']:

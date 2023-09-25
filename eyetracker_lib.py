@@ -6,10 +6,9 @@ Created on Fri Sep  1 20:20:40 2023
 """
 
 import tobii_research as tr
-import time
+from time import sleep
 import os
 import subprocess
-import copy
 
 class EyeTracker:
     def __init__(self, **kwargs):
@@ -113,37 +112,40 @@ class EyeTracker:
             self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)
 
 """ Library usage example """
-# # Setup -----------------------------------------------------------------------
-# tracker = EyeTracker(manager_install_path=os.path.abspath(r'C:\Users\Raquel\AppData\Local\Programs\TobiiProEyeTrackerManager\TobiiProEyeTrackerManager.exe'))
-# tracker.connect_eyetracker()
-# # END Setup -------------------------------------------------------------------
-
-# # # Calibrate eye tracker using UI, run the exe as a subprocess...
-# tracker.call_eye_tracker_manager()
-
-# # Now we just need to tell the SDK that this function should be called when
-# # there is new gaze data. And tell the eye tracker to start tracking! This is
-# # done by one single call to the subscribe_to function of the eye tracker
-# # object:
-# tracker.subscribe(to=['gaze'])
-
-# # The first input parameter is a constant that tells the SDK that it's gaze
-# # data we want. There are other constants for the other types of data that you
-# # can get from the eye tracker (see SDK reference guide for details).
-# # The second parameter is the callback function that we just defined, and the
-# # third parameter tells the SDK that we want the data as a dictionary.
-# # That's all that's needed to get gaze data from the eye tracker, so now just
-# # let the program print the data for a while:
-# time.sleep(5)
-
-# print(tracker.gaze)
-# print(tracker.openness)
-# print(tracker.user_pos)
-
-# # Now that we have collected the gaze data that we want, we should let the eye
-# # tracker (and SDK) know that we're done. You do this by unsubscribing from
-# # gaze data, in almost the same way as you subscribed:
-# tracker.unsubscribe(frm=['gaze'])
+if __name__ == "__main__":
+    # Setup -----------------------------------------------------------------------
+    USER = ''
+    INSTALL_PATH = r'C:\Users\{USER}\AppData\Local\Programs\TobiiProEyeTrackerManager\TobiiProEyeTrackerManager.exe'
+    tracker = EyeTracker(manager_install_path=os.path.abspath(INSTALL_PATH))
+    tracker.connect_eyetracker()
+    # END Setup -------------------------------------------------------------------
+    
+    # # Calibrate eye tracker using UI, run the exe as a subprocess...
+    tracker.call_eye_tracker_manager()
+    
+    # Now we just need to tell the SDK that this function should be called when
+    # there is new gaze data. And tell the eye tracker to start tracking! This is
+    # done by one single call to the subscribe_to function of the eye tracker
+    # object:
+    tracker.subscribe(to=['gaze'])
+    
+    # The first input parameter is a constant that tells the SDK that it's gaze
+    # data we want. There are other constants for the other types of data that you
+    # can get from the eye tracker (see SDK reference guide for details).
+    # The second parameter is the callback function that we just defined, and the
+    # third parameter tells the SDK that we want the data as a dictionary.
+    # That's all that's needed to get gaze data from the eye tracker, so now just
+    # let the program print the data for a while:
+    sleep(5)
+    
+    print(tracker.gaze)
+    print(tracker.openness)
+    print(tracker.user_pos)
+    
+    # Now that we have collected the gaze data that we want, we should let the eye
+    # tracker (and SDK) know that we're done. You do this by unsubscribing from
+    # gaze data, in almost the same way as you subscribed:
+    tracker.unsubscribe(frm=['gaze'])
 
 # %%
 # Tracker data format

@@ -80,24 +80,25 @@ class HeartRateTracker:
         self.device.on_device_data = on_data
     
     def activate_device(self):
-        number_of_tries = 0
-        while not self.emulate and (number_of_tries <= self.reconnects):
-            try:
-                if not self.emulate:
+        if not self.emulate:
+            number_of_tries = 0
+            while (number_of_tries <= self.reconnects):
+                try:
                     if self.verbose: print(f"\nAttempt number {number_of_tries} out of {self.reconnects}:\n  Attempting to connect to ANT+ device...")
                     self.connect_hr_device(device_id=self.device_id)
-                else: pass
-            except Exception as error:
-                number_of_tries += 1
-                if self.verbose: print(f"Heart rate monitor process returned the following error: {error}", "Reconnecting..." if number_of_tries < self.reconnects else "Maximum reconnection attempts exceeded.")
-            else:
-                self.set_flag('active', True)
-                print("Device connected!")
-                break
-        
-        if number_of_tries >= self.reconnects:
-            if self.verbose: print(f"Could not connect to device after {self.reconnects} tries. Exiting...")
-            self.clean_and_exit()
+                except Exception as error:
+                    number_of_tries += 1
+                    if self.verbose: print(f"Heart rate monitor process returned the following error: {error}", "Reconnecting..." if number_of_tries < self.reconnects else "Maximum reconnection attempts exceeded.")
+                else:
+                    self.set_flag('active', True)
+                    print("Device connected!")
+                    break
+            
+            if number_of_tries >= self.reconnects:
+                if self.verbose: print(f"Could not connect to device after {self.reconnects} tries. Exiting...")
+                self.clean_and_exit()
+        else:
+            self.set_flag('active', True)
     
     def start_data_collection(self):
         try:
@@ -145,7 +146,9 @@ class HeartRateTracker:
             
     def clean_and_exit(self):
         # Do something to clean up
-        sys.exit()
+        self.set_flag('active', False)
+        self.set_flag('stop', False)
+        return
     
 # -----------------------------------------------------------------------------
 # This class is a thread wrapper for running the heart rate monitor functions
@@ -168,8 +171,6 @@ class HRMonitorThread(Thread):
         # Initialise thread
         super(HRMonitorThread, self).__init__(name=name)
         self.daemon = kwargs.get('as_daemon', False)
-        self.queue = Queue()
-        self.start()
     
     # Override 'run' function, this will run in the thread
     def run(self):
@@ -181,6 +182,10 @@ class HRMonitorThread(Thread):
         Thread.join(self, *args)
         return self.container
     
+    def start_thread(self):
+        self.queue = Queue()
+        self.start()
+    
     def set_flag(self, **flags):
         for flag, value in flags.items():
             self.hr_tracker.sys_flags[flag] = value if type(value) == bool else False
@@ -191,16 +196,35 @@ class HRMonitorThread(Thread):
 # -----------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    
+# Example: Connects to heart rate device and collects data for a few seconds,
+# disconnects, and repeats once before stopping the thread and exiting.
     try:
         print("\n[MAIN] Starting thread!\n")
-        t = HRMonitorThread(emulate_hr=False, as_daemon=False, verbose=False) # Declare thread wrapper and start thread
+        t = HRMonitorThread(emulate_hr=True, as_daemon=False, verbose=True) # Declare thread wrapper
+        t.start_thread()
         print("\n[MAIN] Waiting for device to be active...\n")
         while not t.check_flags_status('active'):
             sleep(1)
         # Wait and stop thread by raising the "STOP" flag.
         print("\n[MAIN] Continuing execution of main...\n")
-        sleep(10)
+        sleep(3)
+        # Attempt to stop thread
+        print("\n[MAIN] Attempting to stop thread...\n")
+        t.set_flag(stop=True)
+        print("\n[MAIN] Waiting for thread to stop, retreiving data, and exiting...\n")
+        print(t.join())
+        
+        sleep(1)
+        
+        print("\n[MAIN] Re-starting thread!\n")
+        t = HRMonitorThread(emulate_hr=True, as_daemon=False, verbose=True) # Declare thread wrapper
+        t.start_thread()
+        print("\n[MAIN] Waiting for device to be active...\n")
+        while not t.check_flags_status('active'):
+            sleep(1)
+        # Wait and stop thread by raising the "STOP" flag.
+        print("\n[MAIN] Continuing execution of main...\n")
+        sleep(3)
         # Attempt to stop thread
         print("\n[MAIN] Attempting to stop thread...\n")
         t.set_flag(stop=True)
@@ -213,6 +237,6 @@ if __name__ == "__main__":
         print("\n[MAIN] Keyboard interrupt detected, stopping thread before exiting main process...\n")
         t.set_flag(stop=True)
     finally:
-        print("\nWaiting for thread to stop, retreiving data, and exiting...\n")
+        print("\n[MAIN] Waiting for thread to stop, retreiving data, and exiting...\n")
         print(t.join())
         sys.exit()
