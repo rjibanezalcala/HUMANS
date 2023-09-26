@@ -65,15 +65,17 @@ class HeartRateTracker:
         if self.verbose: print(f"Device {self.device} found and receiving...")
 
     def on_device_data(self, page: int, page_name: str, data):
-        if isinstance(data, HeartRateData):
-            if self.check_flag('stop'):
-                if self.verbose: print("Stop flag has been raised, exiting...")
-                self.clean_and_exit()
+        if self.check_flag('stop'):
+            if self.verbose: print("Stop flag has been raised, exiting...")
+            self.clean_and_exit()
+        elif isinstance(data, HeartRateData):
             data = {'hr': str(data.heart_rate)+' bpm', 'time':self.timezone.localize(datetime.now()).strftime("%a %b %d %H:%M:%S.%f %Y %Z")}
             self.hr_data.append(data)
             # print(f"Heart rate update {data.heart_rate} bpm")
             if self.verbose: 
                 print("Device generated:", data)
+        else:
+            pass
             
     def set_hr_device_callbacks(self, on_device_found, on_data):
         self.device.on_found = on_device_found
@@ -84,7 +86,7 @@ class HeartRateTracker:
             number_of_tries = 0
             while (number_of_tries <= self.reconnects):
                 try:
-                    if self.verbose: print(f"\nAttempt number {number_of_tries} out of {self.reconnects}:\n  Attempting to connect to ANT+ device...")
+                    if self.verbose: print(f"\nAttempt number {number_of_tries} out of {self.reconnects}:\n  Attempting to connect to ANT+ device...\n")
                     self.connect_hr_device(device_id=self.device_id)
                 except Exception as error:
                     number_of_tries += 1
@@ -109,8 +111,7 @@ class HeartRateTracker:
         except Exception as error:
             if self.verbose: print(f"Heart rate monitor process raised exception: {error}")
         finally:
-            self.device.close_channel()
-            self.node.stop()
+            self.clean_and_exit()
     
     def start_heart_rate_emulation(self):
         try:
@@ -147,8 +148,17 @@ class HeartRateTracker:
     def clean_and_exit(self):
         # Do something to clean up
         self.set_flag('active', False)
-        self.set_flag('stop', False)
-        return
+        if not self.emulate:
+            try:
+                self.device.close_channel()
+                self.node.stop()
+            except:
+                pass
+            finally:
+                # sys.exit()
+                return
+        else:
+            return
     
 # -----------------------------------------------------------------------------
 # This class is a thread wrapper for running the heart rate monitor functions
@@ -158,19 +168,20 @@ class HRMonitorThread(Thread):
     def __init__(self, name='hr-monitor-thread', **kwargs):
         self.container = [] # Will contain the output data
         self.msg = None
-        # Get rest of parameters
-        self.records = kwargs.get('records', None)
-        self.emulate = kwargs.get('emulate', False)
-        self.maximum_tries = kwargs.get('max_reconnects', 3)
-        self.device_id = kwargs.get('device_id', 0)
         # Decalre HR device
         self.hr_tracker = HeartRateTracker(verbose=kwargs.get('verbose', True),\
                                            emulate_hr=kwargs.get('emulate_hr', False),\
                                            records=kwargs.get('reconnects', 3),\
+                                           device_id=kwargs.get('device_id', 0),\
+                                           timestamp_timezone=kwargs.get('timezone','UTC'),\
                                            hr_data_container=self.container) # Declare heart rate device
         # Initialise thread
         super(HRMonitorThread, self).__init__(name=name)
         self.daemon = kwargs.get('as_daemon', False)
+    
+    def start_thread(self):
+        self.queue = Queue()
+        self.start()
     
     # Override 'run' function, this will run in the thread
     def run(self):
@@ -181,10 +192,6 @@ class HRMonitorThread(Thread):
     def join(self, *args):
         Thread.join(self, *args)
         return self.container
-    
-    def start_thread(self):
-        self.queue = Queue()
-        self.start()
     
     def set_flag(self, **flags):
         for flag, value in flags.items():
@@ -200,7 +207,7 @@ if __name__ == "__main__":
 # disconnects, and repeats once before stopping the thread and exiting.
     try:
         print("\n[MAIN] Starting thread!\n")
-        t = HRMonitorThread(emulate_hr=True, as_daemon=False, verbose=True) # Declare thread wrapper
+        t = HRMonitorThread(emulate_hr=False, as_daemon=False, verbose=True) # Declare thread wrapper
         t.start_thread()
         print("\n[MAIN] Waiting for device to be active...\n")
         while not t.check_flags_status('active'):
@@ -217,7 +224,7 @@ if __name__ == "__main__":
         sleep(1)
         
         print("\n[MAIN] Re-starting thread!\n")
-        t = HRMonitorThread(emulate_hr=True, as_daemon=False, verbose=True) # Declare thread wrapper
+        t = HRMonitorThread(emulate_hr=False, as_daemon=False, verbose=True) # Declare thread wrapper
         t.start_thread()
         print("\n[MAIN] Waiting for device to be active...\n")
         while not t.check_flags_status('active'):
