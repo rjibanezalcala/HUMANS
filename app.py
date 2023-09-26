@@ -826,7 +826,8 @@ def start_hr_monitor(**args):
     emulate_hr = args.get('emulate_hr', False)
     as_daemon = args.get('as_daemon', False)
     verbose = args.get('verbose', False)
-    t = args.get('thread', initialise_device('hrtracker', emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose))
+    timezone = args.get('timezone', 'UTC')
+    t = args.get('thread', initialise_device('hrtracker', emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose, timezone=timezone))
 
     try:
         print("\n[MAIN] Starting HR monitor thread!\n")
@@ -856,9 +857,6 @@ def stop_hr_monitor(thr):
         return data
     
 def initialise_device(d, **kwargs):
-    emulate_hr = kwargs.get('emulate_hr', False)
-    as_daemon = kwargs.get('as_daemon', False)
-    verbose = kwargs.get('verbose', False)
     if d == 'eyetracker':
         global EYE_TRACKER_STATUS
         device = EyeTracker(manager_install_path=eye_settings['manager_install_path'])
@@ -877,8 +875,12 @@ def initialise_device(d, **kwargs):
 
     elif d == 'hrtracker':
         global HR_TRACKER_STATUS
+        emulate_hr = kwargs.get('emulate_hr', False)
+        as_daemon = kwargs.get('as_daemon', False)
+        verbose = kwargs.get('verbose', False)
+        tz = kwargs.get('timezone', 'UTC')
         try:
-            device = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose) # Declare thread wrapper and start thread
+            device = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose, timestamp_timezone=tz) # Declare thread wrapper and start thread
         except Exception as error:
             print(f"\nCould not initialise heart rate monitor thread. Exception raised: {error}")
         else:
@@ -927,7 +929,7 @@ if hr_settings['use_hrtracker'] and hr_settings['test_on_startup']:
     #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
     print(f"\nDetected 'use_hrtracker' as {hr_settings['use_hrtracker']} in settings!\n  Please wait while I test that the device can be connected to...")
     try:
-        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
+        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose'], timezone=app_settings['timestamp_timezone']))
         time.sleep(3)
         print(stop_hr_monitor(hr_monitor))
     except Exception as error:
@@ -1298,7 +1300,7 @@ def trial_html(loc_trial_num):
     if HR_TRACKER_STATUS:
         hr_data = []
         #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
-        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
+        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])
     
     if request.method == "POST":
         data = request.form.to_dict()
@@ -1314,7 +1316,7 @@ def trial_html(loc_trial_num):
         # Stop collecting hr data before uploading data
         if HR_TRACKER_STATUS:
             hr_data = stop_hr_monitor(hr_monitor)
-            participant_data.update({'heart_rate_data': hr_data})
+            if not hr_settings['emulate_device']: participant_data.update({'heart_rate_data': hr_data})
         if app_settings['data_upload']:
             write_trial_to_db(current_question, dec, trial_start, trial_end, exclude_keys=['num_stories'])
                 
