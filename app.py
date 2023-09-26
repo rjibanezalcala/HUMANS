@@ -866,7 +866,7 @@ def initialise_device(d, **kwargs):
             device.connect_eyetracker(eye_settings['eyetracker_index'])
         except Exception as error:
             print(f"\nCould not connect to eye tracker due to error: {error}")
-            answer = input(f"\nNo eye trackers were found in the network but 'use_eyetracker' was set to {eye_settings['use_eyetracker']} in settings.\nDo you wish to continue?\n(Y/N) >> ")
+            answer = input(f"\nNo eye trackers were found in the network but 'use_eyetracker' was set to {eye_settings['use_eyetracker']} in settings.\nDo you wish to continue without the heart rate tracker (Y), or exit the session (N)?\n(Y/N) >> ")
             if answer.lower().startswith("y"):
                 print("\nDisabling eye tracker and continuing session...")
             elif answer.lower().startswith("n"):
@@ -923,7 +923,7 @@ timezone = pytz.timezone(app_settings.get('timestamp_timezone', 'UTC'))
 # Initialise biometrics hardware
 if eye_settings['use_eyetracker']:
     eyetracker = initialise_device('eyetracker')
-if hr_settings['use_hrtracker']:
+if hr_settings['use_hrtracker'] and hr_settings['test_on_startup']:
     #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
     print(f"\nDetected 'use_hrtracker' as {hr_settings['use_hrtracker']} in settings!\n  Please wait while I test that the device can be connected to...")
     try:
