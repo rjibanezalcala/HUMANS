@@ -150,9 +150,14 @@ def get_story_info(search_term, dictionary):
         
 
 # -----------------------------------------------------------------------------
+args_length = len(sys.argv)-1
+print(f"Detected {args_length} command line arguments: {sys.argv}")
 topics = []           # Existing topics.
 task_types = []       # Existing task types.
+story_order = [] # How the stories will be presented across several sessions
+# story_order = "[20, 7, 22, 11, 2, 16, 15, 18, 12, 5, 1, 17, 1, 2, 5, 7, 11, 12, 15, 16, 17, 18, 20, 22]"
 
+# Get server credentials
 server = without_keys( parse_ini(section='postgresql'), {} ) # Server credentials
 app_settings = without_keys( parse_ini(section='app_settings', eval_datatype=True), {} ) # App settings
 
@@ -165,13 +170,16 @@ if app_settings['validate_stories'] in [1, '1', 'True', 'true', 'y', 'yes', 'Yes
 
 topics = list(story_relations.keys())   # Get a list of all the topics
 task_types = [ x for x in list(story_relations[random.sample(list(story_relations.keys()), 1)[-1]].keys()) if x not in ['topic_id'] ] # Get a list of all the task types
-# --------- Setup ends here --------- 
 
-#topics_pool = ['Education-Post-Education Life', 'Food', 'Vehicle/Transportation', 'Entertainment'] # Topics selected by the user
-topics_pool = ['Vehicle/Transportation', 'Medical', 'Party', 'Entertainment']
-story_order = [] # How the stories will be presented across several sessions
-# story_order = "[20, 7, 22, 11, 2, 16, 15, 18, 12, 5, 1, 17, 1, 2, 5, 7, 11, 12, 15, 16, 17, 18, 20, 22]"
-
+# Get topics of interest from command line.
+if args_length >= app_settings['minimum_topics']:
+    topics_pool = [sys.argv[x] for x in range(1, args_length+1) if sys.argv[x] in topics]
+    print(f"Retrieved topics of interest {topics_pool}")
+else:
+    topics_pool = ['Education-Post-Education Life', 'Food', 'Vehicle/Transportation', 'Entertainment'] # Topics selected by the user
+    print(f"\nDid not detect enough topics of interest in argumnets.\nUsing example topics of interest {topics_pool}")
+# --------- Setup ends here --------- \
+    
 # Check the format of the user's story data. Check if the list elements are numeric (legacy story data),
 # if this returns the same list, then the user's story data is in the old format.
 if len(story_order) > 0 and (len([ s for s in ast.literal_eval(story_order) if str(s).isnumeric() ]) == len(ast.literal_eval(story_order))):
@@ -190,9 +198,10 @@ if len(story_order) == 0:
         # Randomly sample stories out of the existing stories pool that correspond to
         # subject's topics of interest while also taking into account task type. This
         # will generate paths to the sampled stories and place them in 'story_order'.
-        print("Sampling stories for each task type and topic, please wait...")
+        print("\n\nSampling stories for each task type and topic, please wait...\n")
         try:
             for task in task_types:
+                print("\n-------------------------------------------------------------")
                 pool = [] # The pool of stories to sample from. The list will be populated only with stories that fall in the scope of all the topics selected by the user.
                 for topic in topics_pool:
                     pool = pool + story_relations[topic][task]
@@ -201,7 +210,7 @@ if len(story_order) == 0:
                 # print("Sample from:", pool, end="")
                 # print(" (topics:"+str(topics_pool)+")"+" (task:"+task+")")
                 # print("Sample size:", app_settings[task.replace('-','_').lower()])
-                print(f"\n  Task type: {task}\n  Stories in pool: {pool}\n  Length of story pool: {len(pool)}\n  Attempting to sample: {app_settings[task.replace('-','_').lower()]}\n\n")
+                print(f"\n  Task type: {task}\n  Stories in pool: {pool}\n  Length of story pool: {len(pool)}\n  Attempting to sample: {app_settings[task.replace('-','_').lower()]}")
                 sample = random.sample(pool, app_settings[task.replace('-','_').lower()])
                 # print("Result:", sample)
                 # print("---------")
@@ -212,10 +221,10 @@ if len(story_order) == 0:
             print(f"Raised exception: {error}")
             sys.exit()
         else:
-            print("  Successfully generated story order!\n")
+            print("\n\n  Successfully generated story order!\n")
         finally:
             story_order = sum(story_order, []) # story_order will be a list of lists, this joins everything so that the list is uniform.
-            #random.shuffle(story_order) # Shuffle the story_order list to create more randomness.
+            random.shuffle(story_order) # Shuffle the story_order list to create more randomness.
     else:
         # Return back to topic selection screen.
         print(f"Please select at least { app_settings['minimum_topics'] } topics!")
@@ -224,7 +233,7 @@ else:
           f" has been conserved and reformatted to fit this version's needs. This can be turned off in { os.path.abspath('bin/settings.ini') }"+\
           " under 'ignore_legacy_story_data'.")
 
-print( get_story_info(story_order[4], story_relations) )
-
+#print( get_story_info(story_order[4], story_relations) )
+print(story_order, "\n")
 
 
