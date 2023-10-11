@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sep  1 20:20:40 2023
-
-@author: Raquel
+eyetracker_lib.py v0.1
+@author: Raquel Ibáñez Alcalá
 """
 
 import tobii_research as tr
 from time import sleep
-import os
-import subprocess
+from os import path
+from subprocess import run
 
 class EyeTracker:
     def __init__(self, **kwargs):
@@ -16,6 +16,7 @@ class EyeTracker:
         self.gaze     = 'not_subscribed'
         self.openness = 'not_subscribed'
         self.user_pos = 'not_subscribed'
+        self.flags    = { 'active':False }   # Flags to show device status
         self.my_eyetracker = None
     
     def connect_eyetracker(self, tracker_index=0):
@@ -34,7 +35,7 @@ class EyeTracker:
     def call_eye_tracker_manager(self):
         print("\nCalling Tobii Eye Tracker Manager for calibration routine...\n  App will hang until the Manager is closed.")
         # Calibrate eye tracker using UI, run the exe as a subprocess...
-        calibration_process = subprocess.run(self.manager_install_path)
+        calibration_process = run(self.manager_install_path)
         # If calibration program reutns a non-zero, raise a CalledProcessError.
         return_code = calibration_process.check_returncode()
         print(f"Manager returned with exit code {return_code}.")
@@ -74,49 +75,70 @@ class EyeTracker:
         streams. There are three data streams; gaze, eye openness, and user
         position.
     """
-    def subscribe(self, to='all'):
+    def subscribe(self, to='all', max_attempts=2):
         expected_in = ['gaze', 'openness', 'position', 'all']
-        if to != 'all':
-            for x in to:
-                if x == "gaze":
-                    self.gaze = []
-                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
-                elif x == "openness":
-                    self.openness = []
-                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback, as_dictionary=True)
-                elif x == "position":
-                    self.user_pos = []
-                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback, as_dictionary=True)
+        attempts = 0
+        while attempts < max_attempts:
+            try:
+                if to != 'all':
+                    for x in to:
+                        if x == "gaze":
+                            self.gaze = []
+                            self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
+                        elif x == "openness":
+                            self.openness = []
+                            self.my_eyetracker.subscribe_to(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback, as_dictionary=True)
+                        elif x == "position":
+                            self.user_pos = []
+                            self.my_eyetracker.subscribe_to(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback, as_dictionary=True)
+                        else:
+                            raise Exception(f"\nParameter 'to' was not recognised. Received {x}, expected {str(expected_in)}!")
+                            break
                 else:
-                    raise Exception(f"\nParameter 'to' was not recognised. Received {x}, expected {str(expected_in)}!")
-        else:
-            self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
-            self.my_eyetracker.subscribe_to(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback, as_dictionary=True)
-            self.my_eyetracker.subscribe_to(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback, as_dictionary=True)
+                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
+                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback, as_dictionary=True)
+                    self.my_eyetracker.subscribe_to(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback, as_dictionary=True)
+            except Exception as error:
+                print(f"[EYE TRACKER ERROR] Could not subscribe to data stream(s) '{to}' due to the following error: {error}\n\nAttempting to unsubscribe and retrying...")
+                if self.unsubscribe(frm=to):
+                    print("[EYE TRACKER ERROR] Unsubscribe failed! Returning with error code '1'")
+                    return 1
+                attempts += 1
+            else:
+                self.flags['active'] = True
+                break
+        return 0
     
     def unsubscribe(self, frm):
         expected_in = ['gaze', 'openness', 'position', 'all']
-        if frm != 'all':
-            for x in frm:
-                if x == "gaze":
-                    self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
-                elif x == "openness":
-                    self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback)
-                elif x == "position":
-                    self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)
-                else:
-                    raise Exception(f"\nParameter 'fr' was not recognised. Received {x}, expected {str(expected_in)}!")
+        try:
+            if frm != 'all':
+                for x in frm:
+                    if x == "gaze":
+                        self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
+                    elif x == "openness":
+                        self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback)
+                    elif x == "position":
+                        self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)
+                    else:
+                        raise Exception(f"\nParameter 'frm' was not recognised. Received {x}, expected {str(expected_in)}!")
+            else:
+                self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
+                self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback)
+                self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)
+        except Exception as error:
+            print(f"[EYE TRACKER ERROR] Could not unsubscribe to data stream(s) '{frm}' due to the following error: {error}\n\nExiting program...")
+            return 1
         else:
-            self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
-            self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback)
-            self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)
+            self.flags['active'] = False
+            return 0
 
 """ Library usage example """
 if __name__ == "__main__":
     # Setup -----------------------------------------------------------------------
     USER = ''
     INSTALL_PATH = r'C:\Users\{USER}\AppData\Local\Programs\TobiiProEyeTrackerManager\TobiiProEyeTrackerManager.exe'
-    tracker = EyeTracker(manager_install_path=os.path.abspath(INSTALL_PATH))
+    tracker = EyeTracker(manager_install_path=path.abspath(INSTALL_PATH))
     tracker.connect_eyetracker()
     # END Setup -------------------------------------------------------------------
     

@@ -2,13 +2,13 @@
 """
 Created on Wed Oct  4 15:51:42 2023
 
+randomise_relationship_levels.py v0.1
 @author: Raquel Ibáñez Alcalá
-randomise_relationship_levels.py v0
 
 """
 
 from os import path
-from random import sample, choice
+from random import sample
 import re
 
 def read_file(root_dir, story, file):
@@ -73,23 +73,24 @@ def replace_one(text, word_bank, replace_from=None, replace_with=None):
 def replace_all(text, word_bank, replace_from=None, replace_with=None):
 # Replace the relationship word with one from the word bank
     
-    # Remove punctuation from text and split words into list
-    split_text = re.sub(r'[^\w\s\d]', '', text).split(' ')
-    # If any word in the text appears in the word bank, process the text
-    if any(word in split_text for word in word_bank):
+    # Remove "'s" from text and split words into list
+    split_text = [ re.split(r"'s", word)[0] for word in text.split(' ') ]
+    # If any word (where each word has punctuation removed) in the text appears in the word bank, process the text
+    if any(word in [ re.sub(r'[^\w\s\d]', '', x).lower() for x in split_text] for word in word_bank):
         if replace_from is None:
             results = []
             # Find all of those words and save them in a list
             for i, word in enumerate(split_text):
-                if word in word_bank:
-                    # Get only unique results
-                    if not word in results: results.append(word)
-            
+                if re.sub(r'[^\w\s\d]', '', word).lower() in word_bank:
+                    # Get only unique results. Save the word without punctuation
+                    if not word in results: results.append(re.sub(r'[^\w\s\d]', '', word))
+            print(f"\nFound matches in text! {results}")
             # Sample as many words from the word bank as there are results
             pick = sample(word_bank, len(results)) if replace_with is None else replace_with
+            print(f"Replacing matching results with: {pick}\n")
             for i, word in enumerate(results):
                 # Replace all words with the sampled word
-                text = text.replace(word, pick[i])
+                text = text.replace(word, pick[i].title() if word[0].isupper() else pick[i])
             
             return text, pick
         else:
@@ -116,12 +117,14 @@ if __name__ == "__main__":
     # story_23, 'friend' appears twice
     # story_24, 'friend' appears twice
     
-    story_num = 'story_'+str(choice(valid_stories))
-    text = read_file(root_dir, story_num, 'context')
+    # story_num = 'story_'+str(choice(valid_stories))
+    story_num = 'story_17'
+    text = read_file(root_dir, story_num, 'pref_cost')
+    text = text[6]
     print(f"\n>> Picking random story: {story_num}")
     print("\n>> Run replace_one with randomly picked relationship level:")
     print(f'>>> Text before replacement:\n"{text}"')
-    new_text, replaced = replace_one(text, relationship_pool)
+    new_text, replaced = replace_one(text, relationship_pool, replace_with="cousin")
     if new_text != text:
         print(f'\n>>> After replacement with replaced word "{replaced}":\n"{new_text}"')
     else:

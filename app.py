@@ -1,18 +1,23 @@
+"""
+Human Decision Making App v32.2
+09/October/2023
+@authors: Lara Rakocevic and Raquel Ibáñez Alcalá
+"""
 from flask import Flask, render_template, redirect, Markup, request
 import re
-import ast
+from ast import literal_eval
 import itertools
-import random
+from random import shuffle, randint, sample
 import time
-import subprocess
-import numpy as np
-import copy
+from subprocess import Popen
+#import numpy as np
+from copy import deepcopy
 import os
-import fnmatch
+#import fnmatch
 import psycopg2
 import pandas as pd
-import shutil
-import datetime
+from shutil import copy2
+from datetime import datetime
 import pytz
 import sys
 from configparser import ConfigParser as cfgp
@@ -43,9 +48,9 @@ def parse_ini(filename='bin/settings.ini',
     if eval_datatype:
         for key, value in db.items():
             if value.isnumeric():
-                db[key] = ast.literal_eval(value)
+                db[key] = literal_eval(value)
             elif value.startswith('['):
-                db[key] = ast.literal_eval(value)
+                db[key] = literal_eval(value)
             
     return db
 
@@ -111,7 +116,7 @@ def validate(theoretical, real, inplace=False):
     if inplace:
         validated = theoretical
     else:
-        validated = copy.deepcopy(theoretical)
+        validated = deepcopy(theoretical)
         
     for mkey, sdict in validated.items():
         for key, target in sdict.items():
@@ -246,10 +251,10 @@ def parse_demdata(data, subjectid):
     #              }
     try:
         # Parse certain values so they can be manipulated.
-        data['vis_media'] = ast.literal_eval(data['vis_media'])
-        data['hobbies'] = ast.literal_eval(data['hobbies'])
-        data['pref_stories'] = ast.literal_eval(data['pref_stories'])
-        data['story_order'] = ast.literal_eval(data['story_order'])
+        data['vis_media'] = literal_eval(data['vis_media'])
+        data['hobbies'] = literal_eval(data['hobbies'])
+        data['pref_stories'] = literal_eval(data['pref_stories'])
+        data['story_order'] = literal_eval(data['story_order'])
     # Converts all elements in list into ints (removed due to new format being
     # only strings).
     # data['story_prefs'] = list(map(int, data['story_prefs'].keys()))
@@ -289,7 +294,7 @@ def replace_demdata(user, target_entries, make_backup=True):
     # Create backup of old file if it doesn't exit.
     if make_backup:
         if not os.path.exists(data_dir+"\demographic_info_old.txt"):
-            shutil.copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
+            copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
     
     # Open the original file
     with open(data_dir+"\demographic_info.txt", 'r') as f:
@@ -372,7 +377,7 @@ def get_new_id(reference_from='database'):
         raise Exception(f"\nParameter 'reference_from' was not recognised. Received {reference_from}, expected {str(expected_refs)}!")
         
     while True:
-        participant_id = str(random.randint(10000,99999))
+        participant_id = str(randint(10000,99999))
         if participant_id not in unique_ids:
             break
 
@@ -391,7 +396,7 @@ def get_story_order():
         order = story_order_split[1]
         # pref_topics = lines[len(lines)-1].split(": ")[1]
 
-    story_order = ast.literal_eval(order)
+    story_order = literal_eval(order)
     
     # Check the format of the user's story data. Check if the list elements are numeric (legacy story data),
     # if this returns the same list, then the user's story data is in the old format.
@@ -471,7 +476,7 @@ def choose_prefs(pref_dict):
     best_diff_list = [] 
     for c in index_combos:
         ind1, ind2 = c
-        copy_vals = copy.deepcopy(vals)
+        copy_vals = deepcopy(vals)
         del copy_vals[ind1]
         del copy_vals[ind2-1]
 
@@ -487,6 +492,8 @@ def choose_prefs(pref_dict):
     return prefs
 
 def choose_questions():
+    task_type = story_num_overall.strip().split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     print(f"\nCurrent story: { str(current_story_indx+1) }.\nStory: { story_num_overall }.")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/questions.txt"
     path = f"stories/task_types{story_num_overall}/questions.txt"
@@ -502,6 +509,9 @@ def choose_questions():
         linelist[0] = ' '.join(pattern.findall(l)) # Find all sentences in the question
         linelist[1] = re.findall('\(.*?\)', l)[-1]  # Find everything in parenthesis and take the last element.
         question = linelist[0]
+        if task_type == 'social':
+            if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+                question, _ = replace_all(question, app_settings['relation_levels'], replace_with=relationship_lvl)
         RC = re.findall("\d+", linelist[1]) # Take only the numeric values in this part of the string.
         # RC will contain a variable length list of string numbers. A length of
         # 4 will more than likely indicate that the current task is the
@@ -519,7 +529,6 @@ def choose_questions():
     # the other set of prefs since these variables will likely contain the
     # prefs from a previous task. BB, CC, and multi-choice tasks will also
     # need the cost/reward permutations done differently.
-    task_type = story_num_overall.split('/')[1]
     if task_type == 'benefit_benefit':
         rewards = choose_prefs(reward_prefs)
         costs = []
@@ -544,12 +553,12 @@ def choose_questions():
     relevant_qs = { key: quest_dict[key] for key in relevant_keys if key in list(quest_dict.keys()) }
 
     q_list = list(relevant_qs.items())
-    random.shuffle(q_list)
+    shuffle(q_list)
     
     # Adding this because for the task types below, the 12 preference questions
     # yield 26 question results.
     if task_type in ['cost_cost', 'benefit_benefit']:
-        q_list = random.sample(q_list, app_settings['questions_per_story'])
+        q_list = sample(q_list, app_settings['questions_per_story'])
 
     return q_list
 
@@ -612,7 +621,7 @@ def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=No
 
     # Get subject's info, including id number and their answers.
     # dem_dict = get_demographic_info(participant_id)
-    dem_dict = copy.deepcopy(participant_data)
+    dem_dict = deepcopy(participant_data)
     dem_dict.update({ 'tasktypedone' : story_num_overall,
                       'reward_prefs' : str(reward_prefs),
                       'cost_prefs'   : str(cost_prefs),
@@ -625,7 +634,11 @@ def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=No
                       'trial_elapsed': trial_elapsed,
                       'story_prefs'  : str(story_prefs),
                       'subjectidnumber':participant_id,
-                      'eye_tracker_data': {'gaze_data':eyetracker.gaze, 'eye_openness_data':eyetracker.openness, 'user_position_data':eyetracker.user_pos}
+                      'eye_tracker_data': {'gaze_data': eyetracker.gaze if eye_settings['use_eyetracker'] else None,\
+                                           'eye_openness_data':eyetracker.openness if eye_settings['use_eyetracker'] else None,\
+                                           'user_position_data':eyetracker.user_pos  if eye_settings['use_eyetracker'] else None},
+                      'relationship_level': relationship_lvl
+                      #'heart_rate_data' : hr_monitor.container
                     })
     
     if CREATE_DATA_TABLE:
@@ -703,10 +716,10 @@ def distribute_stories(topics_pool):
                     # print(" (topics:"+str(topics_pool)+")"+" (task:"+task+")")
                     # print("Sample size:", app_settings[task.replace('-','_').lower()])
                     print(f"\n  Task type: {task}\n  Stories in pool: {pool}\n  Length of story pool: {len(pool)}\n  Attempting to sample: {app_settings[task.replace('-','_').lower()]}\n\n")
-                    sample = random.sample(pool, app_settings[task.replace('-','_').lower()])
+                    samp = sample(pool, app_settings[task.replace('-','_').lower()])
                     # print("Result:", sample)
                     # print("---------")
-                    story_order.append([ f"/{task.replace('-','_').lower()}/story_" + i for i in sample ])
+                    story_order.append([ f"/{task.replace('-','_').lower()}/story_" + i for i in samp ])
                     
             except Exception as error:
                 print(f"\nCould not sample stories for the selected task type '{task}', this is usually because the amount of stories to sample for this exceeds the number of stories available for the task type. Please make sure there are enough stories to sample from for the user's selected topics: {topics_pool}")
@@ -732,7 +745,7 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
 # is set to 'all' (default), then the whole data dictionary will be written.
 # If 'data_format' is set to 'records', the data will be written as
 # {data_key}: {data_value}{end_line}, otherwise the data will be written raw.
-    data = copy.deepcopy(user_data)
+    data = deepcopy(user_data)
     filepath = f"data/{participant_id}/{filename}"
     expected_formats = ['records', 'raw']
     
@@ -797,6 +810,7 @@ def reset_user_params():
     global cost_prefs
     global reward_prefs
     global story_prefs
+    global relationship_lvl
     global trial_start
     global trial_end
     global current_question
@@ -815,6 +829,7 @@ def reset_user_params():
     cost_prefs = []
     reward_prefs = []
     story_prefs = {}
+    relationship_lvl = ''
     trial_start = None 
     trial_end = None 
     current_question = None
@@ -823,15 +838,16 @@ def reset_user_params():
     return True
 
 def start_hr_monitor(**args):
-    emulate_hr = args.get('emulate_hr', False)
-    as_daemon = args.get('as_daemon', False)
-    verbose = args.get('verbose', False)
-    timezone = args.get('timezone', 'UTC')
+    emulate_hr = args.get('emulate_hr', hr_settings['emulate_device'])
+    as_daemon = args.get('as_daemon', hr_settings['run_thread_as_daemon'])
+    verbose = args.get('verbose', hr_settings['verbose'])
+    timezone = args.get('timezone', app_settings['timestamp_timezone'])
     t = args.get('thread', initialise_device('hrtracker', emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose, timezone=timezone))
 
     try:
         print("\n[MAIN] Starting HR monitor thread!\n")
-        t.start_thread()
+        if not t.is_alive():
+            t.start_thread()
         print("\n[MAIN] Waiting for device to be active...\n")
         while not t.check_flags_status('active'):
             time.sleep(0.3)
@@ -859,9 +875,9 @@ def stop_hr_monitor(thr):
 def initialise_device(d, **kwargs):
     if d == 'eyetracker':
         global EYE_TRACKER_STATUS
-        device = EyeTracker(manager_install_path=eye_settings['manager_install_path'])
+        device = EyeTracker(manager_install_path=kwargs.get('manager_install_path', eye_settings['manager_install_path']))
         try:
-            device.connect_eyetracker(eye_settings['eyetracker_index'])
+            device.connect_eyetracker(kwargs.get('eyetracker_index', eye_settings['eyetracker_index']))
         except Exception as error:
             print(f"\nCould not connect to eye tracker due to error: {error}")
             answer = input(f"\nNo eye trackers were found in the network but 'use_eyetracker' was set to {eye_settings['use_eyetracker']} in settings.\nDo you wish to continue without the heart rate tracker (Y), or exit the session (N)?\n(Y/N) >> ")
@@ -875,10 +891,10 @@ def initialise_device(d, **kwargs):
 
     elif d == 'hrtracker':
         global HR_TRACKER_STATUS
-        emulate_hr = kwargs.get('emulate_hr', False)
-        as_daemon = kwargs.get('as_daemon', False)
-        verbose = kwargs.get('verbose', False)
-        tz = kwargs.get('timezone', 'UTC')
+        emulate_hr = kwargs.get('emulate_hr', hr_settings['emulate_device'])
+        as_daemon = kwargs.get('as_daemon', hr_settings['run_thread_as_daemon'])
+        verbose = kwargs.get('verbose', hr_settings['verbose'])
+        tz = kwargs.get('timezone', app_settings['timestamp_timezone'])
         try:
             device = HRMonitorThread(emulate_hr=emulate_hr, as_daemon=as_daemon, verbose=verbose, timestamp_timezone=tz) # Declare thread wrapper and start thread
         except Exception as error:
@@ -892,6 +908,34 @@ def initialise_device(d, **kwargs):
     
     return device
     
+def replace_all(text, word_bank, replace_from=None, replace_with=None):
+# Replace the relationship word with one from the word bank
+    
+    # Remove "'s" from text and split words into list
+    split_text = [ re.split(r"'s", word)[0] for word in text.split(' ') ]
+    # If any word (where each word has punctuation removed) in the text appears in the word bank, process the text
+    if any(word in [ re.sub(r'[^\w\s\d]', '', x).lower() for x in split_text] for word in word_bank):
+        if replace_from is None:
+            results = []
+            # Find all of those words and save them in a list
+            for i, word in enumerate(split_text):
+                if re.sub(r'[^\w\s\d]', '', word).lower() in word_bank:
+                    # Get only unique results. Save the word without punctuation
+                    if not word in results: results.append(re.sub(r'[^\w\s\d]', '', word))
+            print(f"\nFound matches in text! {results}")
+            # Sample as many words from the word bank as there are results
+            pick = sample(word_bank, len(results)) if replace_with is None else replace_with
+            print(f"Replacing matching results with: {pick}\n")
+            for i, word in enumerate(results):
+                # Replace all words with the sampled word
+                text = text.replace(word, pick[i].title() if word[0].isupper() else pick[i])
+            
+            return text, pick
+        else:
+            return text.replace(replace_from, replace_with), replace_with
+    else:
+        return text, None
+    
 
 # -----------------------------------------------------------------------------
 print("\nPerforming initial setup operations, please wait...")
@@ -904,6 +948,9 @@ trial_num = 0
 relevant_questions = []
 story_order = []
 current_task_type = ''
+relationship_lvl = ''   # Only used by social tasks.
+eyetracker = None
+hr_monitor = None
 STO_CH = 0  # Flag that indicates that story order had to be changed.
 NEED_RESET = 0 # Flag to reset all global parameters for consecutive users.
 CREATE_DATA_TABLE = 0
@@ -925,13 +972,22 @@ timezone = pytz.timezone(app_settings.get('timestamp_timezone', 'UTC'))
 # Initialise biometrics hardware
 if eye_settings['use_eyetracker']:
     eyetracker = initialise_device('eyetracker')
-if hr_settings['use_hrtracker'] and hr_settings['test_on_startup']:
+if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
     #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
     print(f"\nDetected 'use_hrtracker' as {hr_settings['use_hrtracker']} in settings!\n  Please wait while I test that the device can be connected to...")
     try:
-        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose'], timezone=app_settings['timestamp_timezone']))
-        time.sleep(3)
-        print(stop_hr_monitor(hr_monitor))
+        hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])
+        if hr_settings['test_on_startup']:
+            start_hr_monitor(thread=hr_monitor)
+            hr_monitor.set_flag(data_capture=True, flush_data=False)
+            time.sleep(2)
+            hr_monitor.set_flag(data_capture=False, flush_data=True)
+            datalen = len(hr_monitor.container)
+            print(f"\nDevice generated the following dataset:\n{hr_monitor.container}\nWith length {len(hr_monitor.container)}")
+            if datalen == 0:
+                raise Exception("HeartRateMonitorError: Test returned empty dataset. Check device connection!")
+            else:
+                del datalen
     except Exception as error:
         print(f"\nCould not connect to heart rate monitor device. Please ensure that the ANT+ antenna is pluggled into the computer!\nError raised: {error}")
         answer = input(f"\nNo heart rate monitors were found in the network but 'use_hrtracker' was set to {hr_settings['use_hrtracker']} in settings.\nDo you wish to continue?\n(Y/N) >> ")
@@ -941,6 +997,8 @@ if hr_settings['use_hrtracker'] and hr_settings['test_on_startup']:
         elif answer.lower().startswith("n"):
             print("\nStopping app and closing the web server. See you later!\n")
             sys.exit()
+    finally:
+        stop_hr_monitor(hr_monitor)
     
 # Check if target data table exists in the database:
 if (not exists(app_settings['data_table'])) and app_settings['auto_create_table']:
@@ -954,7 +1012,7 @@ if app_settings['validate_stories']:
     validate(story_relations, dir_map, inplace=True)
 
 topics = list(story_relations.keys())   # Get a list of all the topics
-task_types = [ x for x in list(story_relations[random.sample(list(story_relations.keys()), 1)[-1]].keys()) if x not in ['topic_id'] ] # Get a list of all the task types
+task_types = [ x for x in list(story_relations[sample(list(story_relations.keys()), 1)[-1]].keys()) if x not in ['topic_id'] ] # Get a list of all the task types
 
 num_qs_in_story = app_settings['questions_per_story']   # No. of questions selected per story.
 total_number_of_stories = 0    # How many stories currently exist (calculated from contents of 'stories/task_types').
@@ -1022,29 +1080,47 @@ def select_stories():
 def welcome_participant():
     global eye_settings
     global eyetracker
+    global EYE_TRACKER_STATUS
     global hr_settings
     global hrtracker
+    global hr_monitor
+    global HR_TRACKER_STATUS
     print("\nCalling eye tracker manager to initiate calibration!\n")
     # Re-check app settings to see if biometric devices will be used
     new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
     new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
     
     if new_eye_settings != eye_settings:
-        print("\nEye tracker settings were changes from last session! Reinitialising eye tracker with new settings.")
+        print("\nEye tracker settings were changed from last session! Reinitialising eye tracker with new settings.")
         eye_settings.update(new_eye_settings)
+        EYE_TRACKER_STATUS = 0
         if eye_settings['use_eyetracker']:
             eyetracker = initialise_device('eyetracker')
     
     if new_hr_settings != hr_settings:
-        print("\nHeart rate tracker settings were changes from last session! New settings will be used upon initialisation of heart rate monitoring thread.")
-        hr_settings.update(new_hr_settings)
+        print("\nHeart rate tracker settings were changed from last session! New settings will be used upon initialisation of heart rate monitoring thread.")
+        if not hr_settings['use_external_app']:
+            hr_settings.update(new_hr_settings)
+            HR_TRACKER_STATUS = 0
+            if not hr_monitor is None:
+                if hr_monitor.is_alive():
+                    stop_hr_monitor(hr_monitor)
+                hr_monitor = None
+        else:
+            pass
             
     # Open the heart rate monitor program (non-blocking)
-    # if hr_settings['use_hrtracker']:
-        # hr_monitor = subprocess.Popen(hr_settings['pulsemonitor_install_path'])
+    if hr_settings['use_hrtracker']:
+        if not hr_settings['use_external_app']:
+            hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])    
+            start_hr_monitor(thread=hr_monitor)
+            hr_monitor.set_flag(data_capture=False, flush_data=False)
+        else:
+            hr_monitor = Popen(hr_settings['external_app_install_path'])
     # Open eye tracker manager (blocking)
     if EYE_TRACKER_STATUS:
         eyetracker.call_eye_tracker_manager()
+        
     return render_template('welcome_participant.html')
 
 @app.route("/new", methods=['GET', 'POST'])
@@ -1090,7 +1166,7 @@ def choose_stories():
         participant_data.update({  })
         not_pref_topics = [ story_blurbs[k] for k in not_pref_stories ]
         distribute_stories(pref_stories)
-        random.shuffle(story_order)
+        shuffle(story_order)
         print(f"\nUser's generated story order: { story_order }\n")
         participant_data.update({ 'next_story_index':current_story_indx,
                                   'pref_stories': pref_stories,
@@ -1169,15 +1245,20 @@ def story_num_refresh():
 ## context - read from file, click next -> to reward pref
 @app.route('/context')
 def context():
+    global relationship_lvl
     # Determine the task type to know whether to proceed directly to cost if
     # the task type is cost_cost
-    task_type = story_num_overall.split('/')[1]
+    task_type = story_num_overall.strip().split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/context.txt"
     path = f"stories/task_types{story_num_overall}/context.txt"
     txt = open(path).read()
-    
+    if task_type == 'social':
+        if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+            txt, relationship_lvl = replace_all(txt, app_settings['relation_levels'])
+    print(f"replaced word {relationship_lvl}")
     return render_template('context.html', content=txt, next_prefs=( 'cost' if task_type=='cost_cost' else 'reward' ))
 
 ## enter values (+ save), click next -> to cost pref
@@ -1189,6 +1270,7 @@ def rank_prefs(cost_or_reward):
 
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     task_type = story_num_overall.split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
     txt = open(path).read()
     
@@ -1199,7 +1281,10 @@ def rank_prefs(cost_or_reward):
             line = option.split(")")
             opt_num = int(line[0])
             opt_description = line[1]
-            opt_dict[opt_num] = opt_description.strip()
+            if task_type == 'social':
+                if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+                    txt, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_lvl)
+            opt_dict[opt_num] = txt.strip()
 
     if request.method == "POST":
         data = request.form.to_dict()
@@ -1222,9 +1307,15 @@ def rank_prefs(cost_or_reward):
 @app.route('/refresh')
 def context_refresh():
     global relevant_questions
+    task_type = story_num_overall.strip().split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/context.txt"
     txt = open(path).read()
+    if task_type == 'social':
+        if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+            txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
     relevant_questions = choose_questions()
     return render_template('refresh.html', content=txt)
 
@@ -1240,6 +1331,8 @@ def ask_if_change_prefs():
 def rank_prefs_again(cost_or_reward):
     global cost_prefs
     global reward_prefs
+    task_type = story_num_overall.strip().split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
@@ -1253,6 +1346,9 @@ def rank_prefs_again(cost_or_reward):
             line = option.split(")")
             opt_num = int(line[0])
             opt_description = line[1]
+            if task_type == 'social':
+                if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+                    txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
             opt_dict[opt_num] = opt_description.strip()
 
     if request.method == "POST":
@@ -1284,23 +1380,23 @@ def trial_html(loc_trial_num):
     global trial_end
     global current_question
     global participant_data
+    global relationship_lvl
             
     tup, q = relevant_questions[trial_num-1]
 
     # trial_start = time.gmtime()
     # Changing this to a datetime timestamp with timezone data to get
     # microsecond precision and be able to track when timestamps were made.
-    trial_start = timezone.localize(datetime.datetime.now())
+    trial_start = timezone.localize(datetime.now())
     current_question = tup
     
     # Start collecting eye tracker data
     if EYE_TRACKER_STATUS:
         eyetracker.subscribe(to=eye_settings['subscriptions'])
     
-    if HR_TRACKER_STATUS:
-        hr_data = []
-        #hrtracker = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']))
-        hr_monitor = start_hr_monitor(emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])
+    if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
+        # Start capturing heart rate data
+        hr_monitor.set_flag(data_capture=True)
     
     if request.method == "POST":
         data = request.form.to_dict()
@@ -1308,18 +1404,21 @@ def trial_html(loc_trial_num):
 
         dec = vals[0]
         # trial_end = time.gmtime()
-        trial_end = timezone.localize(datetime.datetime.now())
+        trial_end = timezone.localize(datetime.now())
         
+        # Retrieve hr data, stop the data collection, and flush he container
+        if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
+            participant_data['heart_rate_data'] = deepcopy(hr_monitor.container)
+            hr_monitor.set_flag(flush_data=True)
+            # participant_data.update({'heart_rate_data': hr_data})
+            print(f"\nUpdated participant data with: {participant_data['heart_rate_data']}\nWith length: {len(participant_data['heart_rate_data'])}\n")
+
         # Stop collecting eye tracker data before uploading data
         if EYE_TRACKER_STATUS:
-            eyetracker.unsubscribe(frm=eye_settings['subscriptions'])
-        # Stop collecting hr data before uploading data
-        if HR_TRACKER_STATUS:
-            hr_data = stop_hr_monitor(hr_monitor)
-            if not hr_settings['emulate_device']: participant_data.update({'heart_rate_data': hr_data})
+            eyetracker.unsubscribe(frm=eye_settings['subscriptions'])        
+            
         if app_settings['data_upload']:
             write_trial_to_db(current_question, dec, trial_start, trial_end, exclude_keys=['num_stories'])
-                
 
         next_trial = trial_num + 1
         next_trial_str = '/trial/'+str(next_trial)
@@ -1332,6 +1431,7 @@ def trial_html(loc_trial_num):
             participant_data.update({'next_story_index':current_story_indx})
             replace_demdata(participant_id, {'next_story_index':current_story_indx}, make_backup=False)
             trial_num = 0
+            relationship_lvl = ''
             return redirect('/want_change_prefs')
     
     task_type = story_num_overall.split('/')[1]
@@ -1379,6 +1479,10 @@ def total_end():
         # replace_demdata(participant_id, data)
         if app_settings['data_upload']:
             write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=['num_stories'])
+        
+        if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
+            if (not hr_monitor is None) and (hr_monitor.is_alive()):
+                stop_hr_monitor(hr_monitor)
         
         return redirect('/')
     

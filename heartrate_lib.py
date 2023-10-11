@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Sep  7 13:42:41 2023
-
-@author: Raquel
+heartrate_lib.py v0.5
+@author: Raquel Ibáñez Alcalá
 """
 # Heart rate monitor (ANT+ enabled) library
 from openant.easy.node import Node
@@ -10,7 +10,7 @@ from openant.devices import ANTPLUS_NETWORK_KEY
 from openant.devices.heart_rate import HeartRate, HeartRateData
 # Timestamps
 from datetime import datetime
-import pytz
+from pytz import timezone
 # System operations
 import sys
 # Delays
@@ -33,14 +33,16 @@ class HeartRateTracker:
         self.node = None    # The device node data will be streamed to
         self.sys_flags = {
                           'stop': False,   # Signals the hr monitor library to stop collecting data, activated via thread event
-                          'active' : False # If true, means that device is active.
+                          'active' : False, # If true, means that device is active.
+                          'data_capture': False,  # If true, data will be appended to the hr_data_container object
+                          'flush_data': False  # If true, will prompt to flush the data container.
                          }
         self.hr_data = hr_data_container # A data container to be returned by join()
         self.verbose = kwargs.get('verbose', False)     # Prints output to console
         self.reconnects = kwargs.get('reconnects', 3)   # Maximum number of attempts to reconnect to the HR device
         self.emulate = kwargs.get('emulate_hr', False)  # Whether to emulate heart rate data (for development without device)
         self.device_id = kwargs.get('device_id', 0)     # If there are more than one devices connected, take the first device by default
-        self.timezone = pytz.timezone(kwargs.get('timestamp_timezone', 'UTC')) # Timezone to collect timestamps in
+        self.timezone = timezone(kwargs.get('timestamp_timezone', 'UTC')) # Timezone to collect timestamps in
     
     def check_flag(self, flag_type):
         return self.sys_flags[flag_type]
@@ -68,18 +70,28 @@ class HeartRateTracker:
         if self.check_flag('stop'):
             if self.verbose: print("Stop flag has been raised, exiting...")
             self.clean_and_exit()
+        elif self.sys_flags['flush_data']:
+            self.empty_data_container()
+            if self.verbose: print("\nFlushed data container.\nSet 'data_capture' flag to True to resume capture.")
         elif isinstance(data, HeartRateData):
             data = {'hr': str(data.heart_rate)+' bpm', 'time':self.timezone.localize(datetime.now()).strftime("%a %b %d %H:%M:%S.%f %Y %Z")}
-            self.hr_data.append(data)
+            if self.sys_flags['data_capture']: self.hr_data.append(data)
             # print(f"Heart rate update {data.heart_rate} bpm")
-            if self.verbose: 
+            if self.verbose:
                 print("Device generated:", data)
+                print("Current flag states:", self.sys_flags)
         else:
             pass
             
     def set_hr_device_callbacks(self, on_device_found, on_data):
         self.device.on_found = on_device_found
         self.device.on_device_data = on_data
+    
+    def empty_data_container(self):
+        self.sys_flags['data_capture'] = False
+        self.hr_data.clear()    
+        self.sys_flags['flush_data'] = False
+        return
     
     def activate_device(self):
         if not self.emulate:
@@ -116,22 +128,24 @@ class HeartRateTracker:
     def start_heart_rate_emulation(self):
         try:
             if self.verbose: print("Starting emulation device, raise stop flag to exit")
-            while True:
-                if self.check_flag('stop'):
-                    if self.verbose: print("Stop flag has been raised, exiting...")
-                    break
+            while not self.check_flag('stop'):
+                if self.sys_flags['flush_data']:
+                    self.empty_data_container()
+                    if self.verbose: print("\nFlushed data container.\nSet 'data_capture' flag to True to resume capture.")
                 bpm = str(randint(65,80))
                 data = {'hr': bpm+' bpm', 'time':self.timezone.localize(datetime.now()).strftime("%a %b %d %H:%M:%S.%f %Y %Z")}
-                self.hr_data.append(data)
+                if self.sys_flags['data_capture']: self.hr_data.append(data)
                 # print(f"Heart rate update {data.heart_rate} bpm")
                 if self.verbose:
                     print("Emulation device generated:", data)
-                sleep(0.5)
+                    print("Current flag states:", self.sys_flags)
+                sleep(1)
         except KeyboardInterrupt:
             if self.verbose: print("Closing ANT+ device...")
         except Exception as error:
             if self.verbose: print(f"Heart rate monitor process raised exception: {error}")
         finally:
+            print("Device emulation has stopped.")
             return
             
     def main_process(self):
@@ -155,7 +169,7 @@ class HeartRateTracker:
             except:
                 pass
             finally:
-                # sys.exit()
+                #sys.exit()
                 return
         else:
             return
@@ -178,9 +192,9 @@ class HRMonitorThread(Thread):
         # Initialise thread
         super(HRMonitorThread, self).__init__(name=name)
         self.daemon = kwargs.get('as_daemon', False)
-    
-    def start_thread(self):
         self.queue = Queue()
+        
+    def start_thread(self):
         self.start()
     
     # Override 'run' function, this will run in the thread
@@ -205,36 +219,46 @@ class HRMonitorThread(Thread):
 if __name__ == "__main__":
 # Example: Connects to heart rate device and collects data for a few seconds,
 # disconnects, and repeats once before stopping the thread and exiting.
-    try:
-        print("\n[MAIN] Starting thread!\n")
-        t = HRMonitorThread(emulate_hr=False, as_daemon=False, verbose=True) # Declare thread wrapper
-        t.start_thread()
-        print("\n[MAIN] Waiting for device to be active...\n")
-        while not t.check_flags_status('active'):
-            sleep(1)
-        # Wait and stop thread by raising the "STOP" flag.
-        print("\n[MAIN] Continuing execution of main...\n")
-        sleep(3)
-        # Attempt to stop thread
-        print("\n[MAIN] Attempting to stop thread...\n")
-        t.set_flag(stop=True)
-        print("\n[MAIN] Waiting for thread to stop, retreiving data, and exiting...\n")
-        print(t.join())
+    repeats = 3  
+
+    def main_routine(t):
+        print("--------------------------------------------------------------")
+        # Start data capture
+        print("\n[MAIN] Starting data capture...")
+        t.set_flag(data_capture=True)
         
+        # Continue doing something else
+        print("\n[MAIN] Continuing execution of main...\n")
+        i = 0
+        while i < 5:
+            sleep(1)
+            i += 1
+        
+        # Print data, stop capturing data, and flush the container.
+        print(f"\n[MAIN] Container has the following:\n{t.container}\n")
+        t.set_flag(flush_data=True)
+        print("--------------------------------------------------------------")
         sleep(1)
         
-        print("\n[MAIN] Re-starting thread!\n")
-        t = HRMonitorThread(emulate_hr=False, as_daemon=False, verbose=True) # Declare thread wrapper
+    try:
+        print("\n[MAIN] Starting thread!\n")
+        t = HRMonitorThread(emulate_hr=True, as_daemon=True, verbose=True) # Declare thread wrapper
         t.start_thread()
-        print("\n[MAIN] Waiting for device to be active...\n")
+        
+        print("\n[MAIN] Waiting for device to be active...")
         while not t.check_flags_status('active'):
+            print('*', end='')
             sleep(1)
-        # Wait and stop thread by raising the "STOP" flag.
-        print("\n[MAIN] Continuing execution of main...\n")
-        sleep(3)
+        
+        for i in range(0, repeats):
+            print("\n\nRepeat number", i+1)
+            main_routine(t)
+            print("\n\nEnd repeat\n\n")
+        
         # Attempt to stop thread
         print("\n[MAIN] Attempting to stop thread...\n")
         t.set_flag(stop=True)
+        
         # Send info to thread via the queue
         # print("[Main] Sending 'f'.")
         # t.queue.put(b'f')
@@ -243,7 +267,9 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n[MAIN] Keyboard interrupt detected, stopping thread before exiting main process...\n")
         t.set_flag(stop=True)
+    except Exception as error:
+        raise error
     finally:
-        print("\n[MAIN] Waiting for thread to stop, retreiving data, and exiting...\n")
+        print("\n[MAIN] Waiting for thread to stop, retrieving data, and exiting...\n")
         print(t.join())
         sys.exit()
