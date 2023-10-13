@@ -68,7 +68,8 @@ When pasting, make sure to delete the original closing square bracket (']'), add
 
 Finally, save the demographics info file and close it. The app will from the last story it left off on. This is indicated by the user's 'next_story_index' (if '`next_story_from=local`'), or by the number of different stories gone through registered in the database (if '`next_story_from=database`').
 
+> This is a collaborative effort between lrakocev and Raquel 
 > Written with [StackEdit](https://stackedit.io/).
 <!--stackedit_data:
-eyJoaXN0b3J5IjpbLTcwNDE4MDU2NV19
+eyJoaXN0b3J5IjpbLTY3ODQwMTE2MywtNzA0MTgwNTY1XX0=
 -->
