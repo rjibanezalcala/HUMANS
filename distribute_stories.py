@@ -2,7 +2,8 @@
 """
 Created on Fri Jul 28 13:08:10 2023
 
-@author: Raquel
+distribute_stories.py v0.3
+@author: Raquel Ibáñez Alcalá
 """
 
 import pandas as pd
