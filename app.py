@@ -502,7 +502,8 @@ def choose_questions():
     quest_dict = {}
     # Pattern to match all sentences, regardless of punctuation (curly brace included for debugging with example stories).
     pattern = re.compile(r'([A-Z][^\.!?}]*[\.!?}])', re.M)
-    for l in lines: 
+    for l in lines:
+        l = l.replace("’", "'")
         # linelist = l.split("?") 
         # question = linelist[0] + "?"
         linelist = ['', '']
@@ -1257,7 +1258,7 @@ def context():
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/context.txt"
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path).read()
+    txt = open(path).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, relationship_lvl = replace_all(txt, app_settings['relation_levels'])
@@ -1275,7 +1276,7 @@ def rank_prefs(cost_or_reward):
     task_type = story_num_overall.split('/')[1]
     story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
-    txt = open(path).read()
+    txt = open(path).read().replace("’", "'")
     
     options = txt.split("\n")
     opt_dict = {}
@@ -1315,7 +1316,7 @@ def context_refresh():
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path).read()
+    txt = open(path).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
@@ -1340,7 +1341,7 @@ def rank_prefs_again(cost_or_reward):
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
     task_type = story_num_overall.split('/')[1]
-    txt = open(path).read()
+    txt = open(path).read().replace("’", "'")
 
     options = txt.split("\n")
     opt_dict = {}
