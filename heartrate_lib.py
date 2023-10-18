@@ -78,7 +78,7 @@ class HeartRateTracker:
             if self.sys_flags['data_capture']: self.hr_data.append(data)
             # print(f"Heart rate update {data.heart_rate} bpm")
             if self.verbose:
-                print("Device generated:", data)
+                if self.sys_flags['data_capture']: print("Device generated:", data)
                 print("Current flag states:", self.sys_flags)
         else:
             pass
@@ -88,7 +88,6 @@ class HeartRateTracker:
         self.device.on_device_data = on_data
     
     def empty_data_container(self):
-        self.sys_flags['data_capture'] = False
         self.hr_data.clear()    
         self.sys_flags['flush_data'] = False
         return
@@ -137,7 +136,7 @@ class HeartRateTracker:
                 if self.sys_flags['data_capture']: self.hr_data.append(data)
                 # print(f"Heart rate update {data.heart_rate} bpm")
                 if self.verbose:
-                    print("Emulation device generated:", data)
+                    if self.sys_flags['data_capture']: print("Emulation device generated:", data)
                     print("Current flag states:", self.sys_flags)
                 sleep(1)
         except KeyboardInterrupt:

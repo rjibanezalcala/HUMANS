@@ -998,7 +998,8 @@ if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
             print("\nStopping app and closing the web server. See you later!\n")
             sys.exit()
     finally:
-        stop_hr_monitor(hr_monitor)
+        # stop_hr_monitor(hr_monitor)
+        pass
     
 # Check if target data table exists in the database:
 if (not exists(app_settings['data_table'])) and app_settings['auto_create_table']:
@@ -1112,8 +1113,10 @@ def welcome_participant():
     # Open the heart rate monitor program (non-blocking)
     if hr_settings['use_hrtracker']:
         if not hr_settings['use_external_app']:
-            hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])    
-            start_hr_monitor(thread=hr_monitor)
+            if hr_monitor is None:
+                hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])    
+            if not hr_monitor.is_alive():
+                start_hr_monitor(thread=hr_monitor)
             hr_monitor.set_flag(data_capture=False, flush_data=False)
         else:
             hr_monitor = Popen(hr_settings['external_app_install_path'])
@@ -1396,7 +1399,13 @@ def trial_html(loc_trial_num):
     
     if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
         # Start capturing heart rate data
-        hr_monitor.set_flag(data_capture=True)
+        print("\n\nSetting data_capture flag to TRUE")
+        r = 0
+        while not hr_monitor.check_flags_status('data_capture'):
+            r += 1
+            print(f"Try number {r}\n\n")
+            hr_monitor.set_flag(data_capture=True)
+            time.sleep(0.1)
     
     if request.method == "POST":
         data = request.form.to_dict()
