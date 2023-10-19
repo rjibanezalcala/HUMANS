@@ -1287,8 +1287,8 @@ def rank_prefs(cost_or_reward):
             opt_description = line[1]
             if task_type == 'social':
                 if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
-                    txt, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_lvl)
-            opt_dict[opt_num] = txt.strip()
+                    opt_description, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_lvl)
+            opt_dict[opt_num] = opt_description.strip()
 
     if request.method == "POST":
         data = request.form.to_dict()
