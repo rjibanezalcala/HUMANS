@@ -3,7 +3,7 @@ Would you like to rent a fancy venue which is expensive and may limit the number
 Would you like to rent a fancy venue that is expensive and may limit the number of guests due to space constraints or limit the budget for decorations which may result in a less visually appealing atmosphere? (C1C9)
 Would you like to rent a fancy venue that is expensive and may limit the number of guests due to space constraints or rent a community hall that might have scheduling conflicts causing availability of the hall to be limited? (C1C10)
 Would you like to rent a fancy venue which is expensive and may limit the number of guests due to space constraints or the DJ you appointed might not have the same energy as a live band? (C1C11)
-Would you like to rent a fancy venue which is expensive and may limit the number of guests due to space constraints or go or potluck-style meals that may result in uneven contributions?(C1C12)
+Would you like to rent a fancy venue which is expensive and may limit the number of guests due to space constraints or go or potluck-style meals that may result in uneven contributions? (C1C12)
 Would you like to hire a live band that is costly and might not cater to everyone's musical preferences or rent a small community hall that might lack the ambiance of a fancy venue? (C2C7)
 Would you like to hire a live band that is costly and might not cater to everyone's musical preferences or hire a DJ instead of a live band that might not appeal to everyone? (C2C8)
 Would you like to hire a live band that is costly and might not cater to everyone's musical preferences or limit the budget for decorations which may result in a less visually appealing atmosphere? (C2C9)
