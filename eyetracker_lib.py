@@ -79,9 +79,11 @@ class EyeTracker:
         expected_in = ['gaze', 'openness', 'position', 'all']
         attempts = 0
         while attempts < max_attempts:
+            print(f"[EYE TRACKER] Attempt number {attempts}")
             try:
                 if to != 'all':
                     for x in to:
+                        print(f"[EYE TRACKER] Subscribing to...{x}")
                         if x == "gaze":
                             self.gaze = []
                             self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
@@ -95,6 +97,7 @@ class EyeTracker:
                             raise Exception(f"\nParameter 'to' was not recognised. Received {x}, expected {str(expected_in)}!")
                             break
                 else:
+                    print("[EYE TRACKER] Subscribing to...all")
                     self.my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback, as_dictionary=True)
                     self.my_eyetracker.subscribe_to(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback, as_dictionary=True)
                     self.my_eyetracker.subscribe_to(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback, as_dictionary=True)
@@ -106,7 +109,7 @@ class EyeTracker:
                 attempts += 1
             else:
                 self.flags['active'] = True
-                break
+                attempts = max_attempts + 1
         return 0
     
     def unsubscribe(self, frm):
@@ -114,6 +117,7 @@ class EyeTracker:
         try:
             if frm != 'all':
                 for x in frm:
+                    print(f"[EYE TRACKER] Unsubscribing from...{x}")
                     if x == "gaze":
                         self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
                     elif x == "openness":
@@ -123,6 +127,7 @@ class EyeTracker:
                     else:
                         raise Exception(f"\nParameter 'frm' was not recognised. Received {x}, expected {str(expected_in)}!")
             else:
+                print("[EYE TRACKER] Unsubscribing from...all")
                 self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, self.gaze_data_callback)
                 self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_EYE_OPENNESS_DATA, self.eye_openness_data_callback)
                 self.my_eyetracker.unsubscribe_from(tr.EYETRACKER_USER_POSITION_GUIDE, self.user_position_guide_callback)

@@ -424,7 +424,7 @@ def get_starting_story_indx(participant_id, reference_from='database'):
     expected_refs = ['database', 'local']
     if reference_from == 'database':
         try:
-            sql_qry = f"""SELECT COUNT(distinct tasktypedone) FROM { app_settings['data_table'] } WHERE subjectidnumber = '{str(participant_id)}'"""
+            sql_qry = f"""SELECT COUNT(DISTINCT tasktypedone) FROM { app_settings['data_table'] } WHERE subjectidnumber = '{str(participant_id)}'"""
             print(f"\nMaking a connection to database with query {sql_qry}...")
             data = []
         
@@ -512,6 +512,7 @@ def choose_questions():
         question = linelist[0]
         if task_type == 'social':
             if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
+                print(f"\nRandomising relationship levels in question {linelist[1]}")
                 question, _ = replace_all(question, app_settings['relation_levels'], replace_with=relationship_lvl)
         RC = re.findall("\d+", linelist[1]) # Take only the numeric values in this part of the string.
         # RC will contain a variable length list of string numbers. A length of
@@ -922,7 +923,7 @@ def replace_all(text, word_bank, replace_from=None, replace_with=None):
             for i, word in enumerate(split_text):
                 if re.sub(r'[^\w\s\d]', '', word).lower() in word_bank:
                     # Get only unique results. Save the word without punctuation
-                    if not word in results: results.append(re.sub(r'[^\w\s\d]', '', word))
+                    if not re.sub(r'[^\w\s\d]', '', word).lower() in results: results.append(re.sub(r'[^\w\s\d]', '', word))
             print(f"\nFound matches in text! {results}")
             # Sample as many words from the word bank as there are results
             pick = sample(word_bank, len(results)) if replace_with is None else replace_with
@@ -1097,6 +1098,8 @@ def welcome_participant():
         eye_settings.update(new_eye_settings)
         EYE_TRACKER_STATUS = 0
         if eye_settings['use_eyetracker']:
+            if not eyetracker is None:
+                eyetracker = None
             eyetracker = initialise_device('eyetracker')
     
     if new_hr_settings != hr_settings:
@@ -1276,7 +1279,7 @@ def rank_prefs(cost_or_reward):
     task_type = story_num_overall.split('/')[1]
     story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
-    txt = open(path).read().replace("’", "'")
+    txt = open(path).read()
     
     options = txt.split("\n")
     opt_dict = {}
@@ -1284,7 +1287,7 @@ def rank_prefs(cost_or_reward):
         if option != '':
             line = option.split(")")
             opt_num = int(line[0])
-            opt_description = line[1]
+            opt_description = line[1].replace("’", "'")
             if task_type == 'social':
                 if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
                     opt_description, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_lvl)
@@ -1303,7 +1306,7 @@ def rank_prefs(cost_or_reward):
             reward_prefs = data
 
         return redirect("/prefs/cost") if (cost_or_reward == 'reward' and task_type != 'benefit_benefit') else redirect("/refresh")
-
+    
     html = f"{cost_or_reward}_prefs.html"
     return render_template(html, len = len(options), opt_dict=opt_dict)
 
@@ -1394,20 +1397,6 @@ def trial_html(loc_trial_num):
     trial_start = timezone.localize(datetime.now())
     current_question = tup
     
-    # Start collecting eye tracker data
-    if EYE_TRACKER_STATUS:
-        eyetracker.subscribe(to=eye_settings['subscriptions'])
-    
-    if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
-        # Start capturing heart rate data
-        print("\n\nSetting data_capture flag to TRUE")
-        r = 0
-        while not hr_monitor.check_flags_status('data_capture'):
-            r += 1
-            print(f"Try number {r}\n\n")
-            hr_monitor.set_flag(data_capture=True)
-            time.sleep(0.1)
-    
     if request.method == "POST":
         data = request.form.to_dict()
         vals = list(data.values())
@@ -1421,7 +1410,7 @@ def trial_html(loc_trial_num):
             participant_data['heart_rate_data'] = deepcopy(hr_monitor.container)
             hr_monitor.set_flag(flush_data=True)
             # participant_data.update({'heart_rate_data': hr_data})
-            print(f"\nUpdated participant data with: {participant_data['heart_rate_data']}\nWith length: {len(participant_data['heart_rate_data'])}\n")
+            # print(f"\nUpdated participant data with: {participant_data['heart_rate_data']}\nWith length: {len(participant_data['heart_rate_data'])}\n")
 
         # Stop collecting eye tracker data before uploading data
         if EYE_TRACKER_STATUS:
@@ -1443,6 +1432,20 @@ def trial_html(loc_trial_num):
             trial_num = 0
             relationship_lvl = ''
             return redirect('/want_change_prefs')
+    
+    # Start collecting eye tracker data
+    if EYE_TRACKER_STATUS:
+        eyetracker.subscribe(to=eye_settings['subscriptions'])
+    
+    if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
+        # Start capturing heart rate data
+        print("\n\nSetting data_capture flag to TRUE")
+        r = 0
+        while not hr_monitor.check_flags_status('data_capture'):
+            r += 1
+            print(f"Try number {r}\n\n")
+            hr_monitor.set_flag(data_capture=True)
+            time.sleep(0.1)
     
     task_type = story_num_overall.split('/')[1]
     if task_type in ['multi_choice', 'benefit_benefit', 'cost_cost']:
