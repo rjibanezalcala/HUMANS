@@ -31,6 +31,7 @@ through this script, or you will get blank or incomplete text documents.
 HOW TO USE THIS SCRIPT:
 
 SETUP:
+
 1. Use the template I've provided to write your stories.
 2. Finish writing all stories, preferences, and questions throughout the whole
 	document.
@@ -41,6 +42,7 @@ SETUP:
 4. Place this file in the '/input/' folder.
 
 RUNNING THE SCRIPT:
+
 5. Double click on the file 'startup.bat'. A black command window will pop up.
 6. Sit back and relax while the script does its job!
 	The script might take longer if you feed it many word files, but it'll do
