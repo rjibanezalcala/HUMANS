@@ -918,19 +918,23 @@ def replace_all(text, word_bank, replace_from=None, replace_with=None):
     # If any word (where each word has punctuation removed) in the text appears in the word bank, process the text
     if any(word in [ re.sub(r'[^\w\s\d]', '', x).lower() for x in split_text] for word in word_bank):
         if replace_from is None:
+            matches = None
             results = []
             # Find all of those words and save them in a list
-            for i, word in enumerate(split_text):
-                if re.sub(r'[^\w\s\d]', '', word).lower() in word_bank:
-                    # Get only unique results. Save the word without punctuation
-                    if not re.sub(r'[^\w\s\d]', '', word).lower() in results: results.append(re.sub(r'[^\w\s\d]', '', word))
+            for word in word_bank:
+                matches = re.search(r'\b'+re.sub(r'[^\w\s\d]', '', word)+r'\b', text, re.IGNORECASE)
+                if not matches is None:
+                    matches = matches.group(0).lower()
+                    if not matches in results:
+                        results.append(matches)
             print(f"\nFound matches in text! {results}")
             # Sample as many words from the word bank as there are results
             pick = sample(word_bank, len(results)) if replace_with is None else replace_with
             print(f"Replacing matching results with: {pick}\n")
             for i, word in enumerate(results):
-                # Replace all words with the sampled word
-                text = text.replace(word, pick[i].title() if word[0].isupper() else pick[i])
+                # Replace EXACT match
+                text = re.sub(r'\b'+word+r'\b', pick[i], text)
+                text = re.sub(r'\b'+word.title()+r'\b', pick[i].title(), text)
             
             return text, pick
         else:
