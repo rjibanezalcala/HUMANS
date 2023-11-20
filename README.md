@@ -27,6 +27,10 @@ These are scripts that isolate certain functionalities that are built into the a
  - randomise_relationship_levels.py
  - write_to.py
  - Story_Breakdown folder with breakdown_stories.py
+
+> Code within this repository is a collaborative effort between [lrakocev](https://github.com/lrakocev) and [Raquel Ibáñez Alcalá](https://github.com/rjibanezalcala)
+> 
+> README Written with [StackEdit](https://stackedit.io/).
  
 <!--stackedit_data:
 eyJoaXN0b3J5IjpbLTc3NTU3ODQyMywtNzA0MTgwNTY1XX0=
