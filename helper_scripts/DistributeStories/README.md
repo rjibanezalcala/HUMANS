@@ -37,7 +37,3 @@ Once the new story order is generated, copy it from the command line window and 
 When pasting, make sure to delete the original closing square bracket (']'), add a comma and a space, and paste the new story order without the opening square bracket ('['). Also make sure you have not accidentally added an empty line to the end of the file.
 
 Finally, save the demographics info file and close it. The app will from the last story it left off on. This is indicated by the user's 'next_story_index' (if '`next_story_from=local`'), or by the number of different stories gone through registered in the database (if '`next_story_from=database`').
-
-> Code within this repository is a collaborative effort between [lrakocev](https://github.com/lrakocev) and [Raquel Ibáñez Alcalá](https://github.com/rjibanezalcala)
-> 
-> README Written with [StackEdit](https://stackedit.io/).
