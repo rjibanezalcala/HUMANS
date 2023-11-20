@@ -16,7 +16,7 @@ from configparser import ConfigParser as cfgp
 
 import sys
 
-def read_topic_table(file='Human DM Topics.xlsx'):
+def read_topic_table(file='../../Human DM Topics.xlsx'):
 # Retrieves the relationship between topics, task types, and story IDs from
 # Excel file. Returns a dictionary that contains this information where the
 # top-level keys are each topic. Each of these keys will contain a dictionary
@@ -45,7 +45,7 @@ def read_topic_table(file='Human DM Topics.xlsx'):
 
     return relations
 
-def read_dir_tree(rootdir='stories/task_types'):
+def read_dir_tree(rootdir='../../stories/task_types'):
 # Returns the structure of the 'stories/task_types' directory as a dictionary.
     
     dir_map = {}
@@ -66,7 +66,7 @@ def read_dir_tree(rootdir='stories/task_types'):
 
     return dir_map
 
-def parse_ini(filename='bin/settings.ini',
+def parse_ini(filename='../../bin/settings.ini',
               section='postgresql',
               eval_datatype=False):
 # Returns server credentials from ini file.
