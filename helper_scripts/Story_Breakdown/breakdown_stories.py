@@ -213,7 +213,10 @@ for index, name in enumerate(word_files):
                 if string.isnumeric() or len(string) > 1:
                 #if not (text[a].startswith('A.') or text[a].startswith('A)')):
                     # Take the number and parenthesis/dot out of string
-                    prefs.append( str(item_number) + ') ' + re.sub(r'^[A-Z][^?!.]*[?.!]$', '', re.split(r'^([0-9]|[a-z])\.|\)', text[a].strip())[-1].strip()) )
+                    # prefs.append( str(item_number) + ') ' + re.sub(r'^[A-Z][^?!.]*[?.!]$', '', re.split(r'^([0-9]|[a-z])\.|\)', text[a].strip())[-1].strip()) )
+                    item = re.split(r'^([0-9]|[a-z])\.|\) ', text[a].strip())[-1].strip()
+                    item = re.sub(r'(?<=\D)[.]|[.](?=\D)', '', item)
+                    prefs.append( str(item_number) + ') ' + item )
                     item_number += 1
                 a += 1
             stories[current_task][story_index].update({ line.strip().lower().replace('preference', 'pref').replace(' ', '_').replace('(', '').replace(')', '').replace(':', ''):\
