@@ -922,7 +922,7 @@ def replace_all(text, word_bank, replace_from=None, replace_with=None):
             results = []
             # Find all of those words and save them in a list
             for word in word_bank:
-                matches = re.search(r'\b'+re.sub(r'[^\w\s\d]', '', word)+r'\b', text, re.IGNORECASE)
+                matches = re.search(r'\b'+re.sub(r'[^\w\s\d]', '', word)+r'\b', ' '.join(split_text), re.IGNORECASE)
                 if not matches is None:
                     matches = matches.group(0).lower()
                     if not matches in results:
