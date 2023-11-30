@@ -272,7 +272,7 @@ if __name__ == "__main__":
                             
                             if len(filtered_hr) != 0:
                                 if args.supervised:
-                                    input("\n> Press enter to continue or enter Ctrl+C to cancel script.\n")
+                                    input("\n> Press enter to continue to upload or enter Ctrl+C to cancel script.\n")
                                 print("   Continuing to next retrieved user record...")
                             else:
                                 print(r"   No records in file {file} matched generated time bounds, skipping...")
