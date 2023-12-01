@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 21 12:50:26 2023
 
-database_injector.py v0.0.0
+database_injector.py v0.0.1
 @author: Raquel Ibáñez Alcalá
 """
 
@@ -208,6 +208,7 @@ if __name__ == "__main__":
     argparser.add_argument('-d', '--datafolder', dest='data_dir', help='Location of data in disk (default: %(default)s)', default=r"../../data")
     argparser.add_argument('-i', '--ini', dest="set_dir", help='Location of app settings file (default: %(default)s)', default=r"../../bin/settings.ini")
     argparser.add_argument('-cwd', '--usecurrentdir', action="store_true", dest="usecwd", help='Use the current working directory as --datafolder (default: %(default)s)', default=False)
+    argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=False, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
     # Now, parse the command line arguments and store the 
     # values in the 'args' variable
     args = argparser.parse_args()
@@ -225,15 +226,16 @@ if __name__ == "__main__":
     
     # Find all files (with extension) in the target folder defined by the 
     for user_id, files in dir_map.items():
-        processed_dir = path.abspath(f"{root_dir}\\{str(user_id)}\\_PROCESSED_FILES")
-        try:
-            mkdir(processed_dir)
-        except FileExistsError:
-            pass
+        if not args.donotmove:
+            processed_dir = path.abspath(f"{root_dir}\\{str(user_id)}\\_PROCESSED_FILES")
+            try:
+                mkdir(processed_dir)
+            except FileExistsError:
+                pass
         for file in files:
             # If file is a csv file...
             if not (re.search("\.csv$", file) is None):
-                print(f"\n[Injector] Processing file {file} ......", end="")
+                print(f"\n[Injector] Reading file {file} ......", end="")
                 try:
                     # Try to read the file into dataframe
                     df_hr = pd.read_csv(f"{ root_dir }\\{ user_id }\\{ file }", delimiter=';')
@@ -272,20 +274,22 @@ if __name__ == "__main__":
                             
                             if len(filtered_hr) != 0:
                                 if args.supervised:
-                                    input("\n> Press enter to continue to upload or enter Ctrl+C to cancel script.\n")
-                                print("   Continuing to next retrieved user record...")
+                                    input("\n> Press enter to continue to upload, or enter Ctrl+C to cancel script.\n")
+                                print("Continuing to next retrieved user record...")
                             else:
-                                print(r"   No records in file {file} matched generated time bounds, skipping...")
+                                print(f"   No records in file {file} matched generated time bounds, skipping...")
                         
                             # Final step, upload filtered HR data to database
                             if not args.donotupload:
-                                print("\n   Uploading heart rate records to database...")
-                                inj.dt.update_row(inj.db_settings['data_table'], inj.credentials, 'heart_rate_data', str(dumps(filtered_hr)), where_equals=record)
+                                print("\n   Updating heart rate records in database...")
+                                up_rows = inj.dt.update_row(inj.db_settings['data_table'], inj.credentials, 'heart_rate_data', str(dumps(filtered_hr)), where_equals=record)
+                                print(f"\n   >>> Updated {up_rows} row(s) <<<") if up_rows >= 1 and not up_rows is None else print("\n   Could not update database records.")
                             else:
                                 print("\n   >>> Data was not uploaded to database <<<")
                             # -- END RECORDS 'FOR' LOOP --
-                        print(f"\n   Moving {file}\n   from '{ root_dir }\\{ user_id }'\n   to '{processed_dir}'")
-                        move(f"{ root_dir }\\{ user_id }\\{ file }", f"{processed_dir}\\{ file }")
+                        if not args.donotmove:    
+                            print(f"\n   Moving {file}\n   from '{ root_dir }\\{ user_id }'\n   to '{processed_dir}'")
+                            move(f"{ root_dir }\\{ user_id }\\{ file }", f"{processed_dir}\\{ file }")
                     else:
                         print(f"\n   No user records were found for query. Skipped file {file}.\n")
             else:

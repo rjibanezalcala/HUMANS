@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 21 13:22:57 2023
 
-HUMANS_tools.py v0.0.0
+HUMANS_tools.py v0.0.1
 @author: Raquel Ibáñez Alcalá
 """
 
@@ -188,33 +188,37 @@ class DatabaseTools:
     
     def update_row(self, data_table, credentials, column, new_data, where_equals):
         print("[DatabaseTools] Updating database row...")
-        # Construct query
-        query = f"UPDATE { data_table } "+\
-                f"SET { column }='{ new_data }' "+\
-                "WHERE "
-        i = 0
-        for key, value in where_equals.items():
-            query += f"{ key }='{ value }'"
-            query += " AND " if i != len(where_equals)-1 else ';'
-            i += 1
-        
-        print(f"  Constructed query:\n  {query}\n")
-        
-        try:
-            conn = sql.connect(**credentials)
-    
-            cursor = conn.cursor()
-            cursor.execute(query)
-        
-        except Exception as error:
-            print(f"  Update did not complete successfully:\n  {error}\n")
+        if self.exists(data_table, credentials):
+            # Construct query
+            query = f"UPDATE { data_table } "+\
+                    f"SET { column }='{ new_data }' "+\
+                    "WHERE "
+            i = 0
+            for key, value in where_equals.items():
+                query += f"{ key }='{ value }'"
+                query += " AND " if i != len(where_equals)-1 else ';'
+                i += 1
             
-            return False
+            print(f"  Constructed query:\n  {query}\n")
+            
+            try:
+                conn = sql.connect(**credentials)
+        
+                cursor = conn.cursor()
+                cursor.execute(query)
+            
+            except Exception as error:
+                print(f"  Update did not complete successfully:\n  {error}\n")
+                
+                return False
+            else:
+                conn.commit()
+                up_rows = cursor.rowcount
+                cursor.close()
+                
+                return up_rows
         else:
-            conn.commit()
-            cursor.close()
-            
-            return True
+            return False
 
 
 class StoryTools:
