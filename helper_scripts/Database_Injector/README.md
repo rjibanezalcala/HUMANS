@@ -59,11 +59,11 @@ To run the script using command line arguments, follow the usage example below.
 
 If running directly from Python, use
 ~~~
-database_injector.py [-h] [-s] [-dnu] [-d DATA_DIR] [-i SET_DIR] [-cwd]
+database_injector.py [-h] [-s] [-dnu] [-d DATA_DIR] [-i SET_DIR] [-cwd] [-dnm]
 ~~~
 If running from CMD or Windows Powershell, use
 ~~~
-python -i database_injector.py [-h] [-s] [-dnu] [-d DATA_DIR] [-i SET_DIR] [-cwd]
+python -i database_injector.py [-h] [-s] [-dnu] [-d DATA_DIR] [-i SET_DIR] [-cwd] [-dnm]
 ~~~
 Running the 'display_help' batch file will display the script's help message,
 where a script description and a list of parameters with their default values
@@ -87,3 +87,4 @@ The list of script parameters is included below:
 |  -d DATA_DIR | --datafolder DATA_DIR | Location of data in disk (default: ../../data)|
 |  -i SET_DIR | --ini SET_DIR | Location of app settings file (default: ../../bin/settings.ini) |
 |  -cwd | --usecurrentdir | Use the current working directory as --datafolder (default: False) |
+|-dnm | --donotmoveprocessedfiles | prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: False)|
