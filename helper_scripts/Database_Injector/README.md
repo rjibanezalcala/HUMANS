@@ -39,6 +39,7 @@ or
 ~~~
 {path_to_data_folder}\32083\32083_12_01_2023_15_29.csv
 ~~~
+Where '{path_to_data_folder}' is the path given by the '-d' parameter (see [list of available parameters](#available-parameters)).
 
 Only files with a '.csv' file extension delimited by the ';' character will be
 processed. The CSV file must contain at least a column named 'time' where each
@@ -50,6 +51,14 @@ mm/dd/yyyy hh:mm:ss AM|PM
 
 Files that do not comply with these requirements and subdirectories of the numeric
 directory will be skipped.
+
+After reading a CSV file and updating the selected database records, the script
+will move the processed CSV file to a folder named _PROCESSED_FILES in the same
+directory where the file was found. This folder is completely skipped while
+scannng through the data directory. This ensures that the same file isn't
+processed more than once. This can be avoided by using the '-dnm' command line
+parameter, however the parameter is not passed in either of the batch files 
+provided (see [list of available parameters](#available-parameters)).
 
 ### Running the script with supervision
 The script can run under supervision of a human 'user'. The script will carry its
@@ -101,7 +110,7 @@ python -i database_injector.py --help
 ~~~
 from the containing directory.
 
-The list of script parameters is included below:
+#### Available parameters
 
 | Shorthand argument | Extended argument |     Description     |
 | :----:               |       :----:       | :--- |
@@ -112,11 +121,3 @@ The list of script parameters is included below:
 |  -i SET_DIR | --ini SET_DIR | Location of app settings file (default: ../../bin/settings.ini) |
 |  -cwd | --usecurrentdir | Use the current working directory as --datafolder (default: False) |
 |-dnm | --donotmoveprocessedfiles | prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: False)|
-
-### Epilogue
-After reading a CSV file and updating the selected database records, the script
-will move the processed CSV file to a folder named _PROCESSED_FILES in the same
-directory where the file was found. This folder is completely skipped while
-scannng through the data directory. This ensures that the same file isn't
-processed more than once.
-
