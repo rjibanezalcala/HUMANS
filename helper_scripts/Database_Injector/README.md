@@ -27,7 +27,31 @@ Execution time will vary depending on
   - Size of the 'data' directory
   - System specifications
 
-### Start supervised
+### Prerequisits
+CSV files must be contained directly within a subfolder of the specified data
+folder. The containing folder MUST be named using numeric characters ONLY.
+
+For example
+~~~
+D:\{path_to_decision_making_app}\dec-making-app\data\32083\32083_12_01_2023_15_29.csv
+~~~
+or
+~~~
+{path_to_data_folder}\32083\32083_12_01_2023_15_29.csv
+~~~
+
+Only files with a '.csv' file extension delimited by the ';' character will be
+processed. The CSV file must contain at least a column named 'time' where each
+record's timestamp is stored. These timestamps should be formatted[^1] as
+~~~
+mm/dd/yyyy hh:mm:ss AM|PM
+~~~
+[^1]: Compatible timestamp formatting can be changed within the \_\_init\_\_() function of the Injector class and follows standard datetime formatting.
+
+Files that do not comply with these requirements and subdirectories of the numeric
+directory will be skipped.
+
+### Running the script with supervision
 The script can run under supervision of a human 'user'. The script will carry its
 function normally, but will ask for confirmation before uploading records to the
 database.
@@ -44,7 +68,7 @@ The user must simply press enter when the message
 is displayed on the screen. If data is inaccurate, the user should enter the
 key combination CTRL+C to stop the script.
 
-### Start unsupervised
+### Running the script unsupervised
 If the script is started in unsupervised mode, no user interaction is required.
 The script will scan through the entirety of the data folder for data, then filter
 and upload the data to the database.
@@ -88,3 +112,11 @@ The list of script parameters is included below:
 |  -i SET_DIR | --ini SET_DIR | Location of app settings file (default: ../../bin/settings.ini) |
 |  -cwd | --usecurrentdir | Use the current working directory as --datafolder (default: False) |
 |-dnm | --donotmoveprocessedfiles | prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: False)|
+
+### Epilogue
+After reading a CSV file and updating the selected database records, the script
+will move the processed CSV file to a folder named _PROCESSED_FILES in the same
+directory where the file was found. This folder is completely skipped while
+scannng through the data directory. This ensures that the same file isn't
+processed more than once.
+
