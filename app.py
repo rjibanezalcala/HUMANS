@@ -499,9 +499,10 @@ def choose_questions():
     path = f"stories/task_types{story_num_overall}/questions.txt"
     txt = open(path).read()
     lines = txt.split("\n")
+    lines = [line.strip() for line in lines if (line != '' and line != ' ')]
     quest_dict = {}
     # Pattern to match all sentences, regardless of punctuation (curly brace included for debugging with example stories).
-    pattern = re.compile(r'([A-Z][^\.!?}]*[\.!?}])', re.M)
+    pattern = re.compile(r'([A-Z0-9][^\.!?}]*[\.!?}])', re.M)
     for l in lines:
         l = l.replace("’", "'")
         # linelist = l.split("?") 
@@ -1286,6 +1287,7 @@ def rank_prefs(cost_or_reward):
     txt = open(path).read()
     
     options = txt.split("\n")
+    options = [options.strip() for line in options if (line != '' and line != ' ')]
     opt_dict = {}
     for option in options:
         if option != '':
