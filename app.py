@@ -1,9 +1,11 @@
 """
-Human Decision Making App v32.2
-09/October/2023
+Human Decision Making App v32.3.0
+09/October/2023 updated 18/Jun/2025
 @authors: Lara Rakocevic and Raquel Ibáñez Alcalá
 """
-from flask import Flask, render_template, redirect, Markup, request
+# from flask import Flask, render_template, redirect, Markup, request
+from flask import Flask, render_template, redirect, request
+from markupsafe import Markup
 import re
 from ast import literal_eval
 import itertools
@@ -497,7 +499,7 @@ def choose_questions():
     print(f"\nCurrent story: { str(current_story_indx+1) }.\nStory: { story_num_overall }.")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/questions.txt"
     path = f"stories/task_types{story_num_overall}/questions.txt"
-    txt = open(path).read()
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
     lines = txt.split("\n")
     lines = [line.strip() for line in lines if (line != '' and line != ' ')]
     quest_dict = {}
@@ -970,11 +972,17 @@ task_types = []       # Existing task types.
 story_relations = {}  # What topic and task type each story correponds to
 dir_map = {}          # Will contain the a dictionary structure that describes the contents of 'stories/task_types'.
 
+# Create a 'data' directory if it doesn't exist in case app is run for the first time
+wd = os.getcwd()
+if not os.path.isdir( os.path.abspath(wd + '\\data' ) ):
+    os.mkdir( os.path.abspath(wd + '\\data' ) )
+
+# Parse settings.ini
 server = without_keys( parse_ini(section='postgresql'), {} ) # Parse server credentials from ini.
 app_settings = without_keys( parse_ini(section='app_settings', eval_datatype=True), {} ) # Parse app settings from ini.
 eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
-timezone = pytz.timezone(app_settings.get('timestamp_timezone', 'UTC'))
+timezone = pytz.timezone( app_settings.get('timestamp_timezone', 'UTC') )
 
 # Initialise biometrics hardware
 if eye_settings['use_eyetracker']:
@@ -1266,7 +1274,7 @@ def context():
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/context.txt"
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, relationship_lvl = replace_all(txt, app_settings['relation_levels'])
@@ -1284,10 +1292,10 @@ def rank_prefs(cost_or_reward):
     task_type = story_num_overall.split('/')[1]
     story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
-    txt = open(path).read()
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
     
     options = txt.split("\n")
-    options = [options.strip() for line in options if (line != '' and line != ' ')]
+    options = [line.strip() for line in options if (line != '' and line != ' ')]
     opt_dict = {}
     for option in options:
         if option != '':
@@ -1325,7 +1333,7 @@ def context_refresh():
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
@@ -1350,7 +1358,7 @@ def rank_prefs_again(cost_or_reward):
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
     task_type = story_num_overall.split('/')[1]
-    txt = open(path).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
 
     options = txt.split("\n")
     opt_dict = {}
