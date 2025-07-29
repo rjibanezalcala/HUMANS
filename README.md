@@ -1,6 +1,6 @@
 
-# Human Decision-Making App (name pending)
-The purpose of our Human Decision-Making App (HDMA) is to measure decision-making (DM) in human subjects by presenting them with a complex questionnaire specifically designed to elicit DM behaviours in the subject while also collecting biometric data as the subject goes through the different trials.
+# HUMANS
+The purpose of our HUMANS (Human Model for Analyzing Neuroeconomic Situations) system is to measure decision-making (DM) in human subjects by presenting them with a complex questionnaire specifically designed to elicit DM behaviours in the subject while also collecting biometric data as the subject goes through the different trials.
 ## Data collected
 Subjects are not directly identified by name in the data produced by this application. Rather, a randomised ID number between 10000 and 99999 is generated and assigned to the subject. We then collect demographic information including but not limited to sex, gender identity, age range, race and ethnicity, and education. We also collect interests such as hobbies and what kind of media they consume. We use this data to classify subjects into clusters to attempt to identify any meaningful trends.
 
