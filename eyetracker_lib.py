@@ -5,7 +5,7 @@ eyetracker_lib.py v0.1
 @author: Raquel Ibáñez Alcalá
 """
 
-import tobii_research as tr
+#import tobii_research as tr
 from time import sleep
 from os import path
 from subprocess import run

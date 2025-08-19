@@ -23,7 +23,7 @@ from datetime import datetime
 import pytz
 import sys
 from configparser import ConfigParser as cfgp
-from eyetracker_lib import EyeTracker
+#from eyetracker_lib import EyeTracker
 from heartrate_lib import HRMonitorThread
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
