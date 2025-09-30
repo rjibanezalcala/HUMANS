@@ -2,7 +2,7 @@
 
 {% block header %}
 
-<h3> Thanks you for your contribution! You are done for the day. </h3> 
+<h3> Thank you for your contribution! You are done for the day. </h3> 
 
 {% endblock %}
 
@@ -10,17 +10,15 @@
 
 <div class="center2">
 	<form method="POST">
-	
+		{%if app_version=='academic'%}
 		<div class="personal-info" id="notes">
 			<label for="session-notes">Experimenter notes:</label>
 			<textarea name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!! Please write your notes in a single paragraph!"></textarea>
 			<!-- <input type="text" name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!"/> -->
 		</div>
+		{%endif%}
 		
 		<input type="submit" class="btn btn-success" value="Finished!"/>
-		<!-- <nav>
-			<a class="btn btn-success" href="{{url_for('select_stories')}}"> Finished! </a>
-		</nav> -->
 		
 	</form>
 </div>
