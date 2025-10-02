@@ -1900,7 +1900,7 @@ if __name__ == '__main__':
         print("Waitress")
         serve(app, host=host_ip, port=host_port, threads=threads, url_prefix='/humans-app')
     elif args.mode=='local':
-        host_ip = r"127.0.0.1"
+        host_ip = args.host_ip
         host_port = int(args.host_port)
         app_settings.update( { 'verbose': 0 } )
        
