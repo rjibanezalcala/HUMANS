@@ -1152,7 +1152,12 @@ app_settings = without_keys( parse_ini(section='app_settings', eval_datatype=Tru
 eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 timezone = pytz.timezone( app_settings.get('timestamp_timezone', 'UTC') )
+# Tweak settings
 app_settings['exclude_columns'].append('num_stories')
+if not bool(app_settings['academic_version']):
+    # If academic_version is disabled, disable the HRM and eyetracker.
+    eye_settings.update( { 'use_eyetracker': 0 } )
+    hr_settings.update(  { 'use_hrtracker' : 0 } )
 # Parse db_cols.json to figure out what data to upload
 try:
     with open('bin/db_cols.json', 'r') as f:
@@ -1285,7 +1290,7 @@ def login():
         
         # Initialise session data, check the boolean return status of
         # set_session_params()
-        if not set_session_params(data=list(data_cols.keys()), op='set/reset'):
+        if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
             flash("Could not initialize a session for user.", "danger")
             return redirect(url_for("login"))
         else:
@@ -1309,7 +1314,7 @@ def login():
             demographics.update({ 'subjectidnumber': subjectidnumber,
                                   'trial_index'    : 0 } | story_order) # Joins the two dictionaries, updating the first with the contents of the second
             demographics.update( { 'exclude': excluded } )
-            set_session_params( data=demographics, op='update' )
+            set_session_params( data=demographics, op='update', verbose=bool(app_settings['verbose']) )
             
             # Start using session data;
             # Check the STO_CH flag to determine if the user needs to re-make
@@ -1354,14 +1359,14 @@ def how_feel_pls():
                 'max_story_indx': int( story_indices[-1] ) - 1,
                 'current_story_indx': int( session['next_story_index'] ),
                 'story_num_overall': session['story_order'][int(session['next_story_index'])]
-                }, op='update')
+                }, op='update', verbose=bool(app_settings['verbose']))
             
             print("\nNext story found, redirecting user to story context for:")
             print(f"{session['story_num_overall']}\n")
         
         # Get subject's state data and save to session
         feeling = request.form.to_dict()
-        set_session_params(data=feeling, op='update')
+        set_session_params(data=feeling, op='update', verbose=bool(app_settings['verbose']))
         
         # The next page will only be the biometrics page if the app is set to
         # use the biometrics hardware AND the app is set as the academic
@@ -1442,7 +1447,7 @@ def setup_biometrics():
 def new_participant():
     excluded = app_settings['exclude_columns']
     # Try to set up a session
-    if not set_session_params(data=list(data_cols.keys()), op='set/reset'):
+    if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
         flash("Could not initialize a session for user.", "danger")
         redirect("/new")
     
@@ -1473,7 +1478,7 @@ def new_participant():
                       'exclude' : excluded} )
         
         # Update session
-        set_session_params(data=args, op='update')
+        set_session_params(data=args, op='update', verbose=bool(app_settings['verbose']))
 
         return redirect('/choose_stories')
     
@@ -1527,7 +1532,7 @@ def choose_stories():
                                         # the first one again.
                                         'current_story_indx': 0,
                                         'next_story_index': 0,
-                                        'STO_CH': 0 }, op='update')
+                                        'STO_CH': 0 }, op='update', verbose=bool(app_settings['verbose']))
             
             # Make a copy of their demographic data and overwrite 'story order'
             # and 'pref stories' to the new format.
@@ -1538,7 +1543,9 @@ def choose_stories():
                                         'not_pref_stories': not_pref_topics,
                                         'current_story_indx': 0,
                                         'next_story_index': 0,
-                                        'story_order': story_order }, op='update')
+                                        'story_order': story_order }, 
+                               op='update',
+                               verbose=bool(app_settings['verbose']))
             # print(app_settings['exclude_columns'])
             write_userdata_to_file(subjectidnumber, 'demographic_info.txt',
                                    session,
@@ -1575,7 +1582,7 @@ def story_num_refresh():
     set_session_params(data={
         'story_num_overall': story_num_overall,
         'task_type': task_type,
-        'story_num': story_num }, op='update')
+        'story_num': story_num }, op='update', verbose=bool(app_settings['verbose']))
     
     print(f"\nStarting story { story_num_overall }")
     story_info = get_story_info(story_num_overall, story_relations)
@@ -1601,7 +1608,7 @@ def context():
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, relationship_level = replace_all(txt, app_settings['relation_levels'])
-            set_session_params(data={'relationship_level':relationship_level}, op='update')
+            set_session_params(data={'relationship_level':relationship_level}, op='update', verbose=bool(app_settings['verbose']))
         print(f"replaced word {relationship_level}")
     return render_template('context.html', content=txt, next_prefs=( 'cost' if task_type=='cost_cost' else 'reward' ))
 
@@ -1651,9 +1658,9 @@ def rank_prefs(cost_or_reward):
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            set_session_params(data={'cost_prefs': data}, op='update')
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         else:
-            set_session_params(data={'reward_prefs': data}, op='update')
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
 
         return redirect("/prefs/cost") if (cost_or_reward == 'reward' and task_type != 'benefit_benefit') else redirect("/refresh")
     
@@ -1675,7 +1682,7 @@ def context_refresh():
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_level)
-    set_session_params(data={ 'relevant_questions': choose_questions(session) }, op='update')
+    set_session_params(data={ 'relevant_questions': choose_questions(session) }, op='update', verbose=bool(app_settings['verbose']))
     # session['relevant_questions'] = choose_questions(session)
     return render_template('refresh.html', content=txt)
 
@@ -1720,9 +1727,9 @@ def rank_prefs_again(cost_or_reward):
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            set_session_params(data={'cost_prefs': data}, op='update')
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         else:
-            set_session_params(data={'reward_prefs': data}, op='update')
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         
         if app_settings['data_upload']:
             write_trial_to_db((7,7), exclude_keys=session['exclude'])
@@ -1773,7 +1780,7 @@ def trial_html(loc_trial_num):
         next_trial_str = '/trial/'+str(next_trial)
         
         if next_trial < num_qs_in_story:
-            set_session_params({'trial_index': next_trial }, op='update')
+            set_session_params({'trial_index': next_trial }, op='update', verbose=bool(app_settings['verbose']))
             return redirect(next_trial_str)
         else:
             # Update session to point to the next story and reset trial_index
@@ -1782,7 +1789,9 @@ def trial_html(loc_trial_num):
             set_session_params(data={ 'current_story_indx': current_story_indx + 1,
                                       'next_story_index'  : str(next_story),
                                       'trial_index' : 0,
-                                      'relationship_level': '' }, op='update')
+                                      'relationship_level': '' },
+                               op='update',
+                               verbose=bool(app_settings['verbose']))
             # Update demographic data file
             replace_demdata(subjectidnumber, { 'next_story_index': next_story }, make_backup=False)
             
@@ -1839,18 +1848,22 @@ def total_end():
     if app_settings['data_upload']:
         write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
 
-    session['NEED_RESET'] = 1  # Signal that the app parameters need to be reset.
+    set_session_params( data={'NEED_RESET': 1}, op='update', verbose=bool(app_settings['verbose']))  # Signal that the app parameters need to be reset.
     
     if request.method == "POST":
         data = request.form.to_dict()
         print(f"\nRetreived data: {data}\n")
-        set_session_params(data={ 'session_notes': data }, op='update')
+        set_session_params(data={ 'session_notes': data }, op='update', verbose=bool(app_settings['verbose']))
         if app_settings['data_upload']:
             write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
         
         if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
             if (not hr_monitor is None) and (hr_monitor.is_alive()):
                 stop_hr_monitor(hr_monitor)
+        
+        if session['NEED_RESET']:
+            # Clear the session.
+            session.clear()
         
         return redirect('/')
     
@@ -1881,13 +1894,15 @@ if __name__ == '__main__':
         host_port = int(args.host_port)
         threads = int(args.threads)
         print(f"Forced 'academic_version' from {app_settings['academic_version']} to 0.")
-        app_settings.update( { 'academic_version': 0 } )
+        app_settings.update( { 'academic_version': 0,
+                               'verbose': 0} )
         
         print("Waitress")
         serve(app, host=host_ip, port=host_port, threads=threads, url_prefix='/humans-app')
     elif args.mode=='local':
         host_ip = r"127.0.0.1"
         host_port = int(args.host_port)
+        app_settings.update( { 'verbose': 0 } )
        
         print("Flask")
         # Runs regular flask server with debug=False
@@ -1895,6 +1910,7 @@ if __name__ == '__main__':
     else:
         host_ip = r"127.0.0.1"
         host_port = int(args.host_port)
+        app_settings.update( { 'verbose': 1 } )
 
         print("Flask (debug)")
         # Runs local flask server in debug mode
