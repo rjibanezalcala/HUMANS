@@ -380,6 +380,19 @@ def get_new_id(reference_from='database'):
         
     while True:
         participant_id = str(randint(10000,99999))
+
+        # add it to the db immediately
+        sql_insert = f"INSERT INTO {app_settings['data_table']} (subjectidnumber) VALUES ({participant_id});"
+        
+        print('\nMaking a connection...')
+        conn = psycopg2.connect(**server)
+    
+        cursor = conn.cursor()
+        cursor.execute(sql_insert)
+
+        conn.commit()
+        cursor.close()
+
         if participant_id not in unique_ids:
             break
 
