@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% include 'message.html' %}
+{% endblock %}
+
+{% block content %}
+
+<div class = 'center'>
+	<h2> Welcome! </h2>
+	<form method = "POST" name="subjectidnumber">
+		<input type='text' id="subjectidnumber" name="subjectidnumber"
+			placeholder='Enter your participant ID number'>
+		</br>
+		<input type='submit' class='btn btn-primary' value="Log in">
+	</form>
+</div>
+
+<div class='center'>
+	<form action="{{url_for('new_participant')}}" method="GET">
+		<input type="submit" value="I'm a new participant" 
+			name="new_participant" id="new_participant" class="btn btn-primary"/>
+	</form>
+</div>
+
+{%endblock %}

@@ -1,23 +1,28 @@
 {% extends 'base.html' %}
 
-{% block header %} <h3>How many stories do you wish to view in this session?</h3> {% endblock %}
+{% block header %}
+{% include 'message.html' %}
+{% endblock %}
 
-{% block subheader %}
+{% block content %}
 
-<h4>
+<h3>How many stories do you wish to view in this session?</h3>
+
+<!-- <h4>
 	{% if ALERT_FLAG %}
 	<p>ADMIN MESSAGE: REMEMBER TO CLOSE THE APP'S COMMAND WINDOW AND RESTART THE LOCAL WEB SERVER BEFORE THE NEXT SUBJECT BEGINS THEIR SESSION!!</p>
 	{% else %}
 	<p></p>
 	{% endif %}
-</h4>
+</h4> --!>
+
 <br>
 
 <div class = 'center2'>
 	<form method = "POST">
 
-		<label form="text"></label>
-			<select class="custom-select" name="num_stories" title="The number of scenarios you wish to view this session (required)." required>
+		<label for="num_stories"></label>
+			<select class="custom-select" name="num_stories" id="num_stories" title="The number of scenarios you wish to view this session (required)." required>
 				<option class="select-option" value="0" disabled selected >Number of stories:</option>
 				<option class="select-option" value="1">1</option>
 				<option class="select-option" value="2">2</option>

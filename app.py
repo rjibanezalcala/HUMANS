@@ -1,18 +1,23 @@
 """
-Human Decision Making App v32.3.0
+Human Decision Making App v32.3.1
 09/October/2023 updated 18/Jun/2025
 @authors: Lara Rakocevic and Raquel Ibáñez Alcalá
 """
-# from flask import Flask, render_template, redirect, Markup, request
-from flask import Flask, render_template, redirect, request
+## Webserver-related imports
+from flask import Flask, render_template, redirect, request, session, flash, url_for
+from flask_session import Session
+#from flask_limiter import Limiter
+#from flask_limiter.util import get_remote_address
 from markupsafe import Markup
+from waitress import serve
+## Utility imports
 import re
 from ast import literal_eval
 import itertools
 from random import shuffle, randint, sample
 import time
 from subprocess import Popen
-#import numpy as np
+import json
 from copy import deepcopy
 import os
 #import fnmatch
@@ -23,15 +28,34 @@ from datetime import datetime
 import pytz
 import sys
 from configparser import ConfigParser as cfgp
-#from eyetracker_lib import EyeTracker
+from argparse import ArgumentParser
+from secrets import token_hex
+## Custom libraries
+from eyetracker_lib import EyeTracker
 from heartrate_lib import HRMonitorThread
 
+# -------------------------- Configure flask session --------------------------
 app = Flask(__name__, static_folder='static', template_folder='templates')
+# Delcare rate limiter to prevent DDoS or server overload;
+# Deactivate this when debugging...
+# limiter = Limiter(
+#     get_remote_address,
+#     app=app,
+#     default_limits=["5 per day"] )
+# Create a secret key to protect client side sessions. The secret key is needed
+# to decode cookies information transfered to and from the host.
+app.secret_key = token_hex(32)
+app.config["SESSION_PERMANENT"] = False # Session data is deleted after session expires
+app.config["SESSION_TYPE"] = "filesystem" # Session data is stored in the host
+# Initialise the app with server-side sessions to handle user data
+Session(app)
+# -----------------------------------------------------------------------------
 
+# ------------------------------ App functions --------------------------------
 def parse_ini(filename='bin/settings.ini',
               section='postgresql',
               eval_datatype=False):
-# Returns server credentials from ini file.
+# Returns settings from ini file as dictionary.
 
     # Create a parser
     parser = cfgp()
@@ -53,6 +77,8 @@ def parse_ini(filename='bin/settings.ini',
                 db[key] = literal_eval(value)
             elif value.startswith('['):
                 db[key] = literal_eval(value)
+            elif value.startswith('$'):
+                db[key] = os.environ.get(value.split('$')[-1])
             
     return db
 
@@ -222,7 +248,7 @@ def import_demdata(subjectid, credentials, exclude_keys=['num_stories', 'next_st
                 # Store last result in dictionary
                 demdata.update(raw_data[len(raw_data)-1])
             else:
-                demdata.update({ key: participant_data[key] })
+                demdata.update({ key: 0 })
     except Exception as error:
         print("\nCould not import demographic data due to error:", error)
         
@@ -233,7 +259,7 @@ def import_demdata(subjectid, credentials, exclude_keys=['num_stories', 'next_st
 
 def create_data_dir(pid):
     path = os.getcwd()
-    dir_to_create = path + "/data/" + str(pid)
+    dir_to_create = path + "\\data\\" + str(pid)
     os.mkdir(dir_to_create)
     
     return dir_to_create
@@ -265,7 +291,7 @@ def parse_demdata(data, subjectid):
     # Begin parsing:
         path = create_data_dir(subjectid)
         
-        with open(path+"/demographic_info.txt", 'w') as f: 
+        with open(path+"\demographic_info.txt", 'w') as f: 
             for key, value in data.items():
                 # If not at the last key...
                 if key != list(data.keys())[-1]:
@@ -284,22 +310,22 @@ def parse_demdata(data, subjectid):
     
     else:
         print(f"\nSuccessfully parsed user's demographic information; you may find it in { path }.")
-        return path
+        return (path, data)
 
 def replace_demdata(user, target_entries, make_backup=True):
 # Makes a backup and replaces the demographic data entries indicated by the
 # keys in (target_entries) in the user's demographic_info.txt with each key's
 # value. Returns the path to the modified file.
     path = os.getcwd()
-    data_dir = path + "/data/" + str(user)
+    data_dir = path + "\\data\\" + str(user)
     
     # Create backup of old file if it doesn't exit.
     if make_backup:
-        if not os.path.exists(data_dir+"/demographic_info_old.txt"):
-            copy2(data_dir+"/demographic_info.txt", data_dir+"/demographic_info_old.txt")
+        if not os.path.exists(data_dir+"\demographic_info_old.txt"):
+            copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
     
     # Open the original file
-    with open(data_dir+"/demographic_info.txt", 'r') as f:
+    with open(data_dir+"\demographic_info.txt", 'r') as f:
         data = f.readlines()
     # Search the document from the bottom up for each entry in target_entries
     for i in range(len(data)-1, -1, -1):
@@ -311,10 +337,10 @@ def replace_demdata(user, target_entries, make_backup=True):
                 else:
                     data[i] = f"{ key }: { str(value) }"
     # Replace everything in the original file with the new information.
-    with open(data_dir+"/demographic_info.txt", 'w') as f:
+    with open(data_dir+"\demographic_info.txt", 'w') as f:
         f.writelines(data)
     
-    return data_dir+"/demographic_info.txt"
+    return data_dir+"\demographic_info.txt"
     
 def get_story_info(search_term, dictionary):
 # Since story blurbs were replaced with topics, it is necessary to know what
@@ -370,7 +396,7 @@ def get_new_id(reference_from='database'):
         
     elif reference_from == 'local':
         path = os.getcwd()
-        path += "/data/" 
+        path += "\\data\\" 
         unique_ids = set([ int(x) for x in re.findall("\d+", ' '.join(os.listdir(path))) ])
     elif reference_from == 'file':
         pass # Haven't done this yet
@@ -379,67 +405,65 @@ def get_new_id(reference_from='database'):
         raise Exception(f"\nParameter 'reference_from' was not recognised. Received {reference_from}, expected {str(expected_refs)}!")
         
     while True:
-        participant_id = str(randint(10000,99999))
+        break
 
-        # add it to the db immediately
-        sql_insert = f"INSERT INTO {app_settings['data_table']} (subjectidnumber) VALUES ({participant_id});"
-        
-        print('\nMaking a connection...')
-        conn = psycopg2.connect(**server)
+    return subjectidnumber
+
+## Functions start getting messy here, revise? Namely, make them less dependent
+## on globally declared variables where possible (f.e. remove implicit
+## use of Session object and app settings).
+
+def get_story_order(subjectidnumber, ignore_legacy_story_data=0, validate_only=False, to_validate=[]):
+# Validates the story order from the user's demographic info. Returns a
+# dictionary with the story order and the STO_CH flag which signals that the
+# story order needs to be changed (if it is in an incompatible format).
+    if not validate_only:
+        # This will hopefully reduce the number of senseless file reads.
+        filename = f"data/{ subjectidnumber }/demographic_info.txt"
+        with open(filename) as f:
+            lines = f.readlines()
+            story_order = lines[-1]
+            story_order_split = story_order.split(": ")
+            order = story_order_split[1]
+        story_order = literal_eval(order)
+    else:
+        if isinstance(to_validate, list):
+            story_order = to_validate
+        else:
+            story_order = literal_eval(str(to_validate))
     
-        cursor = conn.cursor()
-        cursor.execute(sql_insert)
-
-        conn.commit()
-        cursor.close()
-
-        if participant_id not in unique_ids:
-            break
-
-    return participant_id
-
-def get_story_order():
-# Retrieves the story order from the uder's demographic info. Returns 0 if the
-# user's story order was not altered, but returns 1 if it was.
-    global story_order
-    global STO_CH
-    filename = f"data/{participant_id}/demographic_info.txt"
-    with open(filename) as f:
-        lines = f.readlines()
-        story_order = lines[-1]
-        story_order_split = story_order.split(": ")
-        order = story_order_split[1]
-        # pref_topics = lines[len(lines)-1].split(": ")[1]
-
-    story_order = literal_eval(order)
+    result = {}
     
     # Check the format of the user's story data. Check if the list elements are numeric (legacy story data),
     # if this returns the same list, then the user's story data is in the old format.
     if (len([ s for s in story_order if str(s).isnumeric() ]) == len(story_order)):
-        if app_settings['ignore_legacy_story_data']:
-            STO_CH = 1
-            story_order = []
+        if ignore_legacy_story_data:
+            result.update( { 'STO_CH': 1, 
+                             'story_order': [] } )
             print("\nStory data for this user was found to be formatted for a legacy version of the DM app; story order" +\
                   f" and preferences have been reset and will be re-generated. This can be turned off in { os.path.abspath('bin/settings.ini') }"+\
                   " under 'ignore_legacy_story_data'.")
-            return 1
+            return result
         else:
-            story_order = [ f"/approach_avoid/story_{ str(s) }" for s in story_order ]
+            result.update( { 'STO_CH': 0,
+                             'story_order': [ f"/approach_avoid/story_{ str(s) }" for s in story_order ] } )
             print("\nStory data for this user was found to be formatted for a legacy version of the DM app; story order" +\
                   f" and preferences have been adapted to the format needed by this version. This can be turned off in { os.path.abspath('bin/settings.ini') }"+\
                   " under 'ignore_legacy_story_data'.")
-            return 0
+            return result
     else:
-        return 0
+        result.update( { 'STO_CH': 0,
+                         'story_order': story_order } )
+        return result
 
 
-def get_starting_story_indx(participant_id, reference_from='database'):
-    global max_story_indx
-    global current_story_indx
+def get_starting_story_indx(subjectidnumber, stories_in_session, reference_from='database'):
     expected_refs = ['database', 'local']
+    num_stories_completed = None
+    max_story_indx = None
     if reference_from == 'database':
         try:
-            sql_qry = f"""SELECT COUNT(DISTINCT tasktypedone) FROM { app_settings['data_table'] } WHERE subjectidnumber = '{str(participant_id)}'"""
+            sql_qry = f"""SELECT COUNT(DISTINCT tasktypedone) FROM { app_settings['data_table'] } WHERE subjectidnumber = '{str(subjectidnumber)}'"""
             print(f"\nMaking a connection to database with query {sql_qry}...")
             data = []
         
@@ -458,7 +482,7 @@ def get_starting_story_indx(participant_id, reference_from='database'):
         except Exception as error:
             print(f"\nStarting story index could not be retreived from database due to error: {error}.\nAttempting to read from local file...")
             try:
-                num_stories_completed = int(get_demographic_info(participant_id)['next_story_index'])
+                num_stories_completed = int(get_demographic_info(subjectidnumber)['next_story_index'])
             except Exception as error:
                 print(f"\nStarting story index could not be retreived from local file, exception raised: {error}\n")
             else:
@@ -468,17 +492,16 @@ def get_starting_story_indx(participant_id, reference_from='database'):
     
     elif reference_from == 'local':
         try:
-            num_stories_completed = int(get_demographic_info(participant_id)['next_story_index'])
+            num_stories_completed = int(get_demographic_info(subjectidnumber)['next_story_index'])
         except Exception as error:
             print(f"\nStarting story index could not be retreived from local file, exception raised: {error}\n")
         else:
             print(f"\nRetrieved starting story index: {num_stories_completed}.\n")
     else:
         raise Exception(f"\nParameter 'reference_from' was not recognised. Received {reference_from}, expected {str(expected_refs)}!\n")
-        
-
-    current_story_indx = num_stories_completed
-    max_story_indx = min(total_number_of_stories, num_stories_completed + stories_in_session)
+    
+    max_story_indx = min(total_number_of_stories, num_stories_completed + int(stories_in_session))
+    return (num_stories_completed, max_story_indx)
     
 def choose_prefs(pref_dict):
     
@@ -506,10 +529,15 @@ def choose_prefs(pref_dict):
 
     return prefs
 
-def choose_questions():
-    task_type = story_num_overall.strip().split('/')[1]
-    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
-    print(f"\nCurrent story: { str(current_story_indx+1) }.\nStory: { story_num_overall }.")    # Should help with debugging
+def choose_questions(sesh):
+    story_num_overall  = sesh['story_num_overall']
+    task_type          = sesh['task_type']
+    story_num          = sesh['story_num']
+    reward_prefs       = sesh['reward_prefs']
+    cost_prefs         = sesh['cost_prefs']
+    relationship_level   = sesh['relationship_level']
+    
+    print(f"\nChoosing questions for current story: { story_num_overall }.")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/questions.txt"
     path = f"stories/task_types{story_num_overall}/questions.txt"
     txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
@@ -529,7 +557,7 @@ def choose_questions():
         if task_type == 'social':
             if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
                 print(f"\nRandomising relationship levels in question {linelist[1]}")
-                question, _ = replace_all(question, app_settings['relation_levels'], replace_with=relationship_lvl)
+                question, _ = replace_all(question, app_settings['relation_levels'], replace_with=relationship_level)
         RC = re.findall("\d+", linelist[1]) # Take only the numeric values in this part of the string.
         # RC will contain a variable length list of string numbers. A length of
         # 4 will more than likely indicate that the current task is the
@@ -580,13 +608,20 @@ def choose_questions():
 
     return q_list
 
-def get_demographic_info(participant_id):
-    filename = f'data/{participant_id}/demographic_info.txt'
+def get_demographic_info(subjectidnumber, auto_parse=False):
+    filename = f'data/{subjectidnumber}/demographic_info.txt'
     dem_dict = {}
     with open(filename) as f:
         for line in f:
             (key, val) = line.split(": ")
             dem_dict[key] = val.strip()
+    
+    if auto_parse:
+        # Parse certain values so they can be manipulated.
+        dem_dict['vis_media'] = literal_eval(dem_dict['vis_media'])
+        dem_dict['hobbies'] = literal_eval(dem_dict['hobbies'])
+        dem_dict['pref_stories'] = literal_eval(dem_dict['pref_stories'])
+        dem_dict['story_order'] = literal_eval(dem_dict['story_order'])
 
     return dem_dict
 
@@ -616,9 +651,9 @@ def exists(dest_table):
         
     return resp[0]
 
-def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=None, exclude_keys=[]):
-    global CREATE_DATA_TABLE
-    task_type = story_num_overall.split('/')[1]
+def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=None, exclude_keys=[]):    
+    task_type = session['task_type']
+    
     if not task_type in ['multi_choice']:
         r, c = current_question
     else:
@@ -638,44 +673,22 @@ def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=No
         trial_elapsed, trial_end, trial_start = 0, 0, 0
 
     # Get subject's info, including id number and their answers.
-    # dem_dict = get_demographic_info(participant_id)
-    dem_dict = deepcopy(participant_data)
-    dem_dict.update({ 'tasktypedone' : story_num_overall,
-                      'reward_prefs' : str(reward_prefs),
-                      'cost_prefs'   : str(cost_prefs),
+    # dem_dict = get_demographic_info(subjectidnumber)
+    dem_dict = deepcopy(session)
+    dem_dict.update({ 'tasktypedone' : session['story_num_overall'],
+                      'reward_prefs' : str(session['reward_prefs']),
+                      'cost_prefs'   : str(session['cost_prefs']),
                       'cost_level'   : c if not task_type in ['multi_choice'] else [c1, c2],
                       'reward_level' : r if not task_type in ['multi_choice'] else [r1, r2],
                       'decision_made': dec,
-                      'trial_index'  : trial_num,
                       'trial_start'  : trial_start,
                       'trial_end'    : trial_end,
                       'trial_elapsed': trial_elapsed,
-                      'story_prefs'  : str(story_prefs),
-                      'subjectidnumber':participant_id,
                       'eye_tracker_data': {'gaze_data': eyetracker.gaze if eye_settings['use_eyetracker'] else None,\
                                            'eye_openness_data':eyetracker.openness if eye_settings['use_eyetracker'] else None,\
                                            'user_position_data':eyetracker.user_pos  if eye_settings['use_eyetracker'] else None},
-                      'relationship_level': relationship_lvl
                       #'heart_rate_data' : hr_monitor.container
                     })
-    
-    if CREATE_DATA_TABLE:
-        query = f"CREATE TABLE { app_settings['data_table'] }("
-        i = 0
-        for key in dem_dict:
-            if key not in exclude_keys:
-                start = ', ' if i != 0 else ' '
-                query += start+str(key)+" VARCHAR"
-                i += 1
-        query += r" );"
-        
-        print(f"\nCreating data table in database with name { app_settings['data_table'] } using query { query }...")
-        conn = psycopg2.connect(**server)
-        cursor = conn.cursor()
-        cursor.execute(query)
-        conn.commit()
-        cursor.close()
-        CREATE_DATA_TABLE = 0
     
     sql_insert = f"INSERT INTO { app_settings['data_table'] }("
     to_insert = ()
@@ -713,8 +726,17 @@ def write_trial_to_db(current_question, dec=None, trial_start=None, trial_end=No
         if conn is not None:
             conn.close()
 
-def distribute_stories(topics_pool):
-    global story_order
+def distribute_stories(topics_pool, order, verbose=False):
+    # These variables are shared across all clients; declaring them here for
+    # clarity.
+    global story_relations
+    global task_types
+    global app_settings
+    
+    if isinstance(order, list):
+        story_order = deepcopy(order)
+    else:
+        story_order = []
     # Provided that the story_order was not reset...
     if len(story_order) == 0:
         # Check that the subject selected enough stories...
@@ -730,9 +752,11 @@ def distribute_stories(topics_pool):
                         pool = pool + story_relations[topic][task]
                         print(f"  Generated story pool for {task} including topic {topic}: {pool}")
                     
-                    # print("Sample from:", pool, end="")
-                    # print(" (topics:"+str(topics_pool)+")"+" (task:"+task+")")
-                    # print("Sample size:", app_settings[task.replace('-','_').lower()])
+                    if verbose:
+                        print("Sample from:", pool, end="")
+                        print(" (topics:"+str(topics_pool)+")"+" (task:"+task+")")
+                        print("Sample size:", app_settings[task.replace('-','_').lower()])
+                    
                     print(f"\n  Task type: {task}\n  Stories in pool: {pool}\n  Length of story pool: {len(pool)}\n  Attempting to sample: {app_settings[task.replace('-','_').lower()]}\n\n")
                     samp = sample(pool, app_settings[task.replace('-','_').lower()])
                     # print("Result:", sample)
@@ -742,19 +766,21 @@ def distribute_stories(topics_pool):
             except Exception as error:
                 print(f"\nCould not sample stories for the selected task type '{task}', this is usually because the amount of stories to sample for this exceeds the number of stories available for the task type. Please make sure there are enough stories to sample from for the user's selected topics: {topics_pool}")
                 print(f"Raised exception: {error}")
-                sys.exit()
+                return None
             else:
                 print("  Successfully generated story order!\n")
             finally:
-                story_order = sum(story_order, []) # story_order will be a list of lists, this joins everything so that the list is uniform.
+                return sum(story_order, []) # story_order will be a list of lists, this joins everything so that the list is uniform.
                 #random.shuffle(story_order) # Shuffle the story_order list to create more randomness.
         else:
             # Return back to topic selection screen.
             print(f"\nPlease select at least { app_settings['minimum_topics'] } topics!")
+            return None
     else:
         print("\nStory data for this user was found to be formatted for a legacy version of the DM app; the data"+\
               f" has been conserved and reformatted to fit this version's needs. This can be turned off in { os.path.abspath('bin/settings.ini') }"+\
               " under 'ignore_legacy_story_data'.")
+        return story_order
     
 def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_keys='all', exclude_keys=[], data_format='records'):
 # Writes the contents of 'data' to a file in inside data/'user_id'/'filename'
@@ -763,8 +789,9 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
 # is set to 'all' (default), then the whole data dictionary will be written.
 # If 'data_format' is set to 'records', the data will be written as
 # {data_key}: {data_value}{end_line}, otherwise the data will be written raw.
+        
     data = deepcopy(user_data)
-    filepath = f"data/{participant_id}/{filename}"
+    filepath = f"data/{user_id}/{filename}"
     expected_formats = ['records', 'raw']
     
     if include_keys != 'all':
@@ -786,74 +813,74 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
     else:
         raise Exception(f"\nParameter 'data_format' was not recognised. Received {data_format}, expected {str(expected_formats)}!")
             
-def reset_app_params():
-# Reinitialises all relevant global parameters that affect the app's
-# functionality to their default values.
-# This can be used to allow the app to be used and reused without having to
-# restart the flask server.
+# def reset_app_params():
+# # Reinitialises all relevant global parameters that affect the app's
+# # functionality to their default values.
+# # This can be used to allow the app to be used and reused without having to
+# # restart the flask server.
 
-    global current_story_indx
-    global stories_in_session
-    global max_story_indx
-    global story_num_overall
-    global trial_num
-    global relevant_questions
-    global story_order
-    global current_task_type
-    global STO_CH
-    global NEED_RESET
+#     global current_story_indx
+#     global stories_in_session
+#     global max_story_indx
+#     global story_num_overall
+#     global trial_index
+#     global relevant_questions
+#     global story_order
+#     global current_task_type
+#     global STO_CH
+#     global NEED_RESET
     
-    current_story_indx = 0
-    stories_in_session = 3
-    max_story_indx = stories_in_session
-    story_num_overall = 1
-    trial_num = 0
-    relevant_questions = []
-    story_order = []
-    current_task_type = ''
-    STO_CH = 0
-    NEED_RESET = 0
+#     current_story_indx = 0
+#     stories_in_session = 3
+#     max_story_indx = stories_in_session
+#     story_num_overall = 1
+#     trial_index = 0
+#     relevant_questions = []
+#     story_order = []
+#     current_task_type = ''
+#     STO_CH = 0
+#     NEED_RESET = 0
     
-    print("\nApp parameters were reset!")
-    return True
+#     print("\nApp parameters were reset!")
+#     return True
 
-def reset_user_params():
-# Reinitialises all relevant global parameters that store any kind of
-# information about the user their default values.
-# This can be used to allow the app to be used and reused without having to
-# restart the flask server.
+# def reset_user_params():
+# # Reinitialises all relevant global parameters that store any kind of
+# # information about the user their default values.
+# # This can be used to allow the app to be used and reused without having to
+# # restart the flask server.
 
-    global participant_id
-    global participant_data
-    global cost_prefs
-    global reward_prefs
-    global story_prefs
-    global relationship_lvl
-    global trial_start
-    global trial_end
-    global current_question
+#     global subjectidnumber
+#     global participant_data
+#     global cost_prefs
+#     global reward_prefs
+#     global story_prefs
+#     global relationship_level
+#     global trial_start
+#     global trial_end
+#     global current_question
     
-    participant_id = ''
-    participant_data = {'session_notes':'','num_stories':stories_in_session,'hunger':None,'tired':None,\
-                        'pain':None,'stress':None,'sex':None,'genderid':None,'menstruation':None,\
-                        'age':None,'weight':None,'race':None,'ethnicity':None,'relationship_status':None,\
-                        'sexual_orientation':None,'education':None,'college':None,'major':None,\
-                        'exercise':None,'exercise_time_min':None,'exercise_time_max':None,\
-                        'caffeine':None,'nicotine':None,'alcohol':None,'vis_media':None,\
-                        'hobbies':None,'next_story_index':current_story_indx,\
-                        'eye_tracker_data':{'gaze_data':None,'eye_openness_data':None,'user_position_data':None},\
-                        'heart_rate_data':[],\
-                        'pref_stories':None,'story_order':None}
-    cost_prefs = []
-    reward_prefs = []
-    story_prefs = {}
-    relationship_lvl = ''
-    trial_start = None 
-    trial_end = None 
-    current_question = None
+#     subjectidnumber = ''
+#     participant_data = {'session_notes':'','num_stories':stories_in_session,'hunger':None,'tired':None,\
+#                         'pain':None,'stress':None,'sex':None,'genderid':None,'menstruation':None,\
+#                         'age':None,'weight':None,'race':None,'ethnicity':None,'relationship_status':None,\
+#                         'sexual_orientation':None,'education':None,'college':None,'major':None,\
+#                         'exercise':None,'exercise_time_min':None,'exercise_time_max':None,\
+#                         'caffeine':None,'nicotine':None,'alcohol':None,'vis_media':None,\
+#                         'hobbies':None,'next_story_index':current_story_indx,\
+#                         'eye_tracker_data':{'gaze_data':None,'eye_openness_data':None,'user_position_data':None},\
+#                         'heart_rate_data':[],\
+#                         'pref_stories':None,'story_order':None}
+#     cost_prefs = []
+#     reward_prefs = []
+#     story_prefs = {}
+#     relationship_level = ''
+#     trial_start = None 
+#     trial_end = None 
+#     current_question = None
     
-    print("\nUser parameters were reset!")
-    return True
+#     print("\nUser parameters were reset!")
+#     return True
 
 def start_hr_monitor(**args):
     emulate_hr = args.get('emulate_hr', hr_settings['emulate_device'])
@@ -957,47 +984,187 @@ def replace_all(text, word_bank, replace_from=None, replace_with=None):
             return text.replace(replace_from, replace_with), replace_with
     else:
         return text, None
+
+def set_session_params(data=None, op="update", exclude=[], verbose=False):
+# Allocates a dictionary in memory to save data into the flask-session data
+# structure.
+    expected_op = [r'set/reset','update']
+    if op == "set/reset":
+        sesh = {}
+        if isinstance(data, list):
+            for item in data:
+                # To session data, add every key in data if data is a list.
+                # Populate items with None. This ensures that keys correspond
+                # to data table column names if data is a list of column names
+                # from /bin/db_cols.json.
+                if item not in exclude:
+                    sesh.update({str(item): None})
+            # Finally, add items that pertain to app function and are not
+            # uploaded to the database.
+            sesh.update({
+                # Update data table-relevant entries to initialize them to the
+                # correct data type.
+                'story_relevance': {},
+                # Performance entries
+                'num_stories':0,          # The number of stories to be viewed this session
+                'current_story_indx':0,   # The story_order index of the current story
+                'next_story_index': 0,
+                'trial_index': 0,
+                'story_num_overall':None, # The story identifier string of the current story
+                'max_story_indx':None,
+                'task_type': None,
+                'story_num': None,
+                'relevant_questions':[],
+                'exclude': [],            # Keys to exclude from database uploads and demographic data writes.
+                # Flags
+                'STO_CH':0,         # Flag that indicates that story order had to be changed.
+                'NEED_RESET':0,     # Flag to reset all global parameters for consecutive users.
+                })
+            data = sesh
+        else:
+            print("\nPlease pass a list of keys to 'data' to set session parameters.")
+            return False
+    elif op == 'update':
+        # Do not accept None, non-dictionary types, or empty dictionaries
+        if data is None or not isinstance(data, dict) or data == {}:
+           print(f"\nCannot write '{data}' to session data, please pass a dictionary with data to parameter 'data'.") 
+           return False
+        else:
+            for key in exclude:
+                del data[key]
+    else:
+        print(f"\nValid inputs to parameter 'op' are {expected_op}.")
+        return False
+          
     
+    try:
+        print(f"\n{'Updating' if op=='update' else 'Allocating'} session parameters{':' if op=='update' else ''}", end="")
+        if op=='update' and verbose:
+            print("")
+            i = 1
+            for key, value in sorted(data.items()):
+                print(f"{i}. {key}: {value}")
+                i += 1
+            print("")
+        print("..................", end="")
+        session.update(data)
+    except Exception as e:
+        print(f"failed!\nSession data was not written successfully due to error:\n{e}")
+        return False
+    else:
+        print("success!")
+        if op=='update' and verbose:
+            print("\nSession has been updated to:")
+            i = 1
+            for key, value in sorted(session.items()):
+                print(f"{i}. {key}: {value}")
+                i += 1
+        else:
+            print(f"\nSet { len( list( session.keys() ) ) } entries in session.")
+        print("\n")
+        return True
 
+def create_data_table(server_settings, table_name, json_path='bin/db_cols.json', exclude_keys=[]):
+    """
+    Function call to query a PostgreSQL server to create a data table. The
+    column names and variable types are read from a JSON structure contained
+    in a .json file in '/bin/'. 
+    
+    Parameters
+    ----------
+    server_settings: TYPE - Dict
+        Dictionary containing server credentials.
+    json_path : TYPE - String
+        String pointing to a file containing a json structure where each key is
+        a column name, and each value is the variable type for that column.
+
+    Returns
+    -------
+    bool
+        Returns True if table was created successfully, or false if an error is
+        encountered.
+
+    """
+    # Read JSON file and store in dictionary
+    try:
+        with open(json_path, 'r') as f:
+            table_cols = json.load(f)
+    except FileNotFoundError:
+        print(f"\nNo JSON file found at location '{ json_path }'.")
+        return False
+    except json.JSONDecodeError:
+        print(f"\nUnable to decode JSON file '{ json_path }'. File may not be formatted correctly.")
+        return False
+    except Exception as e:
+        print(f"Could not open JSON file at '{ json_path }' due to error:\n{e}")
+        return False
+    else:
+        query = f"CREATE TABLE { table_name }("
+        i = 0
+        for key, value in sorted(table_cols.items()):
+            if key not in exclude_keys:
+                start = ', ' if i != 0 else ' '
+                query += f"{ start }{ key } { value }"
+                i += 1
+        query += r" );"
+        
+        print(f"\nCreating data table in database with name { table_name } using query { query }...")
+        try: 
+            conn = psycopg2.connect(**server_settings)
+            cursor = conn.cursor()
+            cursor.execute(query)
+            conn.commit()
+            cursor.close()
+        except Exception as e:
+            print(f"\nCould not connect to database due to error:\n{e}")
+        else:
+            return True
 # -----------------------------------------------------------------------------
+
+# ------------------------------- Initialize app ------------------------------
 print("\nPerforming initial setup operations, please wait...")
-# Global app params
-current_story_indx = 0
-stories_in_session = 3  # How many stories the subject selects to view per session
-max_story_indx = stories_in_session
-story_num_overall = 1
-trial_num = 0
-relevant_questions = []
-story_order = []
-current_task_type = ''
-relationship_lvl = ''   # Only used by social tasks.
-eyetracker = None
-hr_monitor = None
-STO_CH = 0  # Flag that indicates that story order had to be changed.
-NEED_RESET = 0 # Flag to reset all global parameters for consecutive users.
-CREATE_DATA_TABLE = 0
-EYE_TRACKER_STATUS = 0
-HR_TRACKER_STATUS = 0
 
-# These are not changed throughout the server's lifetime.
-topics = []           # Existing topics.
-task_types = []       # Existing task types.
-story_relations = {}  # What topic and task type each story correponds to
-dir_map = {}          # Will contain the a dictionary structure that describes the contents of 'stories/task_types'.
+# 1. Define global app params; these are not changed throughout the app's
+#    lifetime and apply to ALL served clients.
+eyetracker = None       # Eyetracker settings
+hr_monitor = None       # HRM settings
+EYE_TRACKER_STATUS = 0  # Flag to signal whether the eye tracker is ready
+HR_TRACKER_STATUS = 0   # Flag to signal whether the HRM is ready
+# Story informations, including the "Stories" filesystem
+topics = []             # Existing topics.
+task_types = []         # Existing task types.
+story_relations = {}    # What topic and task type each story correponds to
+dir_map = {}            # Will contain the a dictionary structure that describes the contents of 'stories/task_types'.
 
-# Create a 'data' directory if it doesn't exist in case app is run for the first time
+# 2. Determine the current working directory and scan the "data" folder
 wd = os.getcwd()
-if not os.path.isdir( os.path.abspath(wd + '/data' ) ):
-    os.mkdir( os.path.abspath(wd + '/data' ) )
+# Create a 'data' directory if it doesn't exist in case app is run for the
+# first time.
+if not os.path.isdir( os.path.abspath(wd + '\\data' ) ):
+    os.mkdir( os.path.abspath(wd + '\\data' ) )
 
-# Parse settings.ini
-server = without_keys( parse_ini(section='postgresql'), {} ) # Parse server credentials from ini.
+# 3. Parse app settings
+# Parse bin\settings.ini
+server = without_keys( parse_ini(section='postgresql', eval_datatype=True), {} ) # Parse server credentials from ini.
 app_settings = without_keys( parse_ini(section='app_settings', eval_datatype=True), {} ) # Parse app settings from ini.
 eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
 timezone = pytz.timezone( app_settings.get('timestamp_timezone', 'UTC') )
+# Tweak settings
+app_settings['exclude_columns'].append('num_stories')
+if not bool(app_settings['academic_version']):
+    # If academic_version is disabled, disable the HRM and eyetracker.
+    eye_settings.update( { 'use_eyetracker': 0 } )
+    hr_settings.update(  { 'use_hrtracker' : 0 } )
+# Parse db_cols.json to figure out what data to upload
+try:
+    with open('bin/db_cols.json', 'r') as f:
+        data_cols = json.load(f)
+except Exception as e:
+    print(f"\nUnable to parse what data to upload to database, please provide a JSON file with column names in /bin/.\nError when parsing JSON file: {e}")
+    sys.exit(1)
 
-# Initialise biometrics hardware
+# 4. Initialise biometrics hardware
 if eye_settings['use_eyetracker']:
     eyetracker = initialise_device('eyetracker')
 if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
@@ -1029,84 +1196,200 @@ if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
         # stop_hr_monitor(hr_monitor)
         pass
     
-# Check if target data table exists in the database:
+# 5. Check if target data table exists in the database and create one if it
+#    doesn't.
 if (not exists(app_settings['data_table'])) and app_settings['auto_create_table']:
-    CREATE_DATA_TABLE = 1
+    if not create_data_table(server, app_settings['data_table'], exclude_keys=app_settings['exclude_columns']):
+        sys.exit("\nA valid data table could not be found or created. Please address any errors encountered above and try running the app again.")
 
+# 6. Figure out what stories belong to what topics and task types
 story_relations = read_topic_table(file='Human DM Topics.xlsx') # Import relationship between topics, task types, and stories from Excel file.
 dir_map = read_dir_tree(rootdir='stories/task_types')   # Get a dictionary representation of the /stories/task_types directory
-
 # Check if all stories exist. Those that don't exist will be deleted from the pool of stories to be sampled for the subject.
 if app_settings['validate_stories']:   
     validate(story_relations, dir_map, inplace=True)
-
+# Create a list of topics and task types
 topics = list(story_relations.keys())   # Get a list of all the topics
 task_types = [ x for x in list(story_relations[sample(list(story_relations.keys()), 1)[-1]].keys()) if x not in ['topic_id'] ] # Get a list of all the task types
 
+# 7. Scan story and questions settings
 num_qs_in_story = app_settings['questions_per_story']   # No. of questions selected per story.
 total_number_of_stories = 0    # How many stories currently exist (calculated from contents of 'stories/task_types').
 for x in dir_map: total_number_of_stories = total_number_of_stories + len(dir_map[x])
-min_stories_to_choose = app_settings['minimum_topics']  # The least amount of topics the user will be allowed to choose.
+min_topics = app_settings['minimum_topics']  # The least amount of topics the user will be allowed to choose.
 
-# Global subject params
-participant_id = ''
-cost_prefs = []
-reward_prefs = []
-story_prefs = {}
-participant_data = {'session_notes':'','num_stories':stories_in_session,'hunger':None,'tired':None,\
-                    'pain':None,'stress':None,'sex':None,'genderid':None,'menstruation':None,\
-                    'age':None,'weight':None,'race':None,'ethnicity':None,'relationship_status':None,\
-                    'sexual_orientation':None,'education':None,'college':None,'major':None,\
-                    'exercise':None,'exercise_time_min':None,'exercise_time_max':None,\
-                    'caffeine':None,'nicotine':None,'alcohol':None,'vis_media':None,\
-                    'hobbies':None,'next_story_index':current_story_indx,\
-                    'eye_tracker_data':{'gaze_data':None,'eye_openness_data':None,'user_position_data':None},\
-                    'heart_rate_data':[],\
-                    'pref_stories':None,'story_order':None}
-trial_start = None 
-trial_end = None 
-current_question = None
+# ----------------------------------------------------------------------------- 
 
-# --------- Setup ends here --------- 
+# ----------------------------- Flask routes ----------------------------------
+# The following functions and routes will be what gets forked into threads.
+# Each client will see their own version of each of these functions and the
+# separation into threads will allow client concurrency when the app is run
+# from a WSGI server.
 
-# page for are you a new participant? 
-@app.route('/',methods=['GET', 'POST'])
-def select_stories():
-    global stories_in_session
-    global max_story_indx
-    
-    print(f"\nSession variables {'need ' if NEED_RESET else 'do not need '}to be reset.\n'enable_consecutive_users' is {'enabled ' if app_settings['enable_consecutive_users'] else 'not enabled '}in settings.\n")
-    
-    if NEED_RESET:
-        if app_settings['enable_consecutive_users']:
-            reset_app_params()
-            reset_user_params()
-            ALERT = 0
+# Login
+@app.route("/", methods=['GET', 'POST'])
+# @limiter.limit()
+def login():
+    """
+    This page will simply handle retreiving user data and setting up a user
+    session once the "Log in" button is pressed. Once an answer is submitted
+    via POST, the response is evaluated to make sure it is an ID number. If
+    the number is not found within the local filesystem, the app will attempt
+    to connect to the database to import the data associated with that ID,
+    otherwise the data will be retrieved from the local filesystem. Once data
+    is imported, the starting story index is determined (either from the local
+    user data or the database), and the next story is determined from the story
+    order list.
+    Flash messages are used here to spawn an alert box at the top of the page
+    (included in login.html from message.html using Jinja templates) with the
+    purpose of alerting the user of anything important that may need their
+    attention to contribute to app responsiveness.
+    Redirects to:
+        Itself, if log in fails
+        /choose_stories, if the story order list needs to be reformated from
+            the legacy format.
+        /states, if login is successful
+    """
+    excluded = app_settings['exclude_columns']
+    if request.method == "POST":
+    # Do the following once the 'submit' button on the ID form is pressed:
+        # Grab the contents of the text field
+        subjectidnumber = request.form['subjectidnumber']
+        
+        # Validate the response
+        if not subjectidnumber.isnumeric() and not len(subjectidnumber) == 5:
+            print(f"\nAnswer to form '{subjectidnumber}' is not a valid ID number.\n")
+            flash("Invalid: Participant ID must be five a 5 digit number.", "danger")
+            return redirect(url_for("login"))
+        
+        print(f"\nValid participant ID retrieved is {subjectidnumber}")
+        
+        if subjectidnumber not in os.listdir("data"):
+        # If the participant ID does not exist in the local filesystem...
+            flash(f"Fetching data for ID {subjectidnumber}, please wait...", "info")
+            try: 
+                # Import the data related to that ID from the database and parse it.   
+                demographics = import_demdata(subjectidnumber, server)
+                if demographics is None:
+                    raise Exception("Importing user data from database failed.")
+            except Exception as e:
+                # If this process does not complete, alert the user and stay on page
+                print(f"\nCould not import data for user {subjectidnumber} due to error: {e}\n")
+                flash(f"Invalid: An error occured when loading data for user {subjectidnumber}. Please try a different user ID or select 'I'm a new participant'.", "danger")
+                return redirect(url_for("login"))
+            else:
+                # If data is retrieved, save it to session data.
+                print(f"\nSuccessfully retreived data for user ID {subjectidnumber} from database!\n")
+                demographics = parse_demdata(demographics, subjectidnumber)[-1] # Parse data and save it locally
         else:
-            ALERT = 1
-    else:
-        ALERT = 0
+        # If the data does exist in the local filesystem...
+            # Load all of the user's data to the session
+            demographics = get_demographic_info(subjectidnumber, auto_parse=True)
         
-    if request.method=="POST":
-        # Get subject's "feeling" data
+        # Initialise session data, check the boolean return status of
+        # set_session_params()
+        if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
+            flash("Could not initialize a session for user.", "danger")
+            return redirect(url_for("login"))
+        else:
+            # Filter thru session data to figure out what keys NOT to upload to db
+            # Find keys present in session that are not in the target database,
+            # these keys will not be uploaded to the database.
+            differences = list( set(session.keys()) - set(data_cols.keys()) )
+            if not differences:
+                # If no differences are found
+                pass
+            else:
+                # If differences are found
+                print(f"\nDifferences found between target data location in database and session information:\b{differences}\nThese entries will not be uploaded to database!")
+                excluded += differences
+            
+            # Validate story order (for compatibility with legacy version of
+            # the app).
+            story_order = get_story_order(subjectidnumber, ignore_legacy_story_data=app_settings['ignore_legacy_story_data'], validate_only=True, to_validate=demographics['story_order'])
+            
+            # Begin saving data to session
+            demographics.update({ 'subjectidnumber': subjectidnumber,
+                                  'trial_index'    : 0 } | story_order) # Joins the two dictionaries, updating the first with the contents of the second
+            demographics.update( { 'exclude': excluded } )
+            set_session_params( data=demographics, op='update', verbose=bool(app_settings['verbose']) )
+            
+            # Start using session data;
+            # Check the STO_CH flag to determine if the user needs to re-make
+            # their story order.
+            if session['STO_CH']:
+                print("\nRedirecting user to /choose_stories...\n")
+                return redirect("/choose_stories")
+            # Otherwise continue as normal
+            else:
+                return redirect("/states")
+    
+    return render_template('login.html')
+
+# Page for entering emotional/physiological state information
+@app.route("/states", methods=['GET', 'POST'])
+def how_feel_pls():
+    """
+    This function will request the contents of the 'Number of stories'
+    drop-down first, validate it (leaving it blank should not be accepted and
+    will trigger a pop-up alert), then it will take the state information from
+    the sliders as-is. All this happens when hitting the 'Submit' button at the
+    bottom of the page. This isnformation will then be saved to the session
+    data.
+    Redirects:
+        Itself, if the number of stories answer is not valid
+        /story_num_overall, if the form is submitted successfully
+    """
+    if request.method == "POST":
+        num_stories = request.form.get('num_stories')
+        # Get selected amount of stories in session
+        if num_stories is None:
+            flash("Please select a number of stories from the list", "danger")
+            return redirect(url_for("how_feel_pls"))
+        else:
+            # Use the number of stories already completed and the selected 
+            # number of stories to view to figure out the index of the next
+            # story. Then, figure out what story is next by referencing the
+            # user's story order.
+            story_indices = get_starting_story_indx(session['subjectidnumber'], num_stories, reference_from=app_settings['next_story_from'])
+            set_session_params(data={
+                'num_stories'   : story_indices[0],
+                'max_story_indx': int( story_indices[-1] ) - 1,
+                'current_story_indx': int( session['next_story_index'] ),
+                'story_num_overall': session['story_order'][int(session['next_story_index'])]
+                }, op='update', verbose=bool(app_settings['verbose']))
+            
+            print("\nNext story found, redirecting user to story context for:")
+            print(f"{session['story_num_overall']}\n")
+        
+        # Get subject's state data and save to session
         feeling = request.form.to_dict()
-        participant_data.update(feeling)
+        set_session_params(data=feeling, op='update', verbose=bool(app_settings['verbose']))
         
-        # Get selected amount of stories in session.
-        #num_stories = request.form['num_stories']
-        num_stories = participant_data['num_stories']
-        stories_in_session = int(num_stories)-1
-        max_story_indx = stories_in_session
-        
-        print(participant_data)
-        
-        return redirect('/welcome')
+        # The next page will only be the biometrics page if the app is set to
+        # use the biometrics hardware AND the app is set as the academic
+        # version. The online version cannot possibly use the hardware.
+        if (eye_settings['use_eyetracker'] or hr_settings['use_hrtracker']) and app_settings['academic_version']==1:
+            return redirect(url_for("setup_biometrics"))
+        else:
+            return redirect('/story_num_overall')
+    
+    return render_template('setup_session.html')
 
-    return render_template('setup_session.html', ALERT_FLAG=ALERT)
-
-
-@app.route('/welcome')
-def welcome_participant():
+# Page for initialising biometrics hardware
+@app.route('/biometrics')
+def setup_biometrics():
+    """
+    Here we simply initialise both the eye tracker and heart rate monitor (if
+    they have been activated in bin/setting.ini). Note that the gloab variables
+    used here mean that the settings will be applied to every client's
+    sessions.
+    Redirects:
+        NOTE: Redirections are handled in the HTML template via hyperlink. See
+        <nav> elements.
+        /story_num_overall, if user clicks 'continue' button.
+        /states, if user clicks 'go back' button.
+    """
     global eye_settings
     global eyetracker
     global EYE_TRACKER_STATUS
@@ -1114,7 +1397,7 @@ def welcome_participant():
     global hrtracker
     global hr_monitor
     global HR_TRACKER_STATUS
-    print("\nCalling eye tracker manager to initiate calibration!\n")
+    
     # Re-check app settings to see if biometric devices will be used
     new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
     new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
@@ -1152,121 +1435,152 @@ def welcome_participant():
             hr_monitor = Popen(hr_settings['external_app_install_path'])
     # Open eye tracker manager (blocking)
     if EYE_TRACKER_STATUS:
+        print("\nCalling eye tracker manager to initiate calibration!\n")
+        flash("Remember to close the eye tracker software before continuing!", "info")
         eyetracker.call_eye_tracker_manager()
         
-    return render_template('welcome_participant.html')
+    return render_template('setup_biometrics.html')
 
 @app.route("/new", methods=['GET', 'POST'])
 def new_participant():
-    global participant_id
-
+    excluded = app_settings['exclude_columns']
+    # Try to set up a session
+    if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
+        flash("Could not initialize a session for user.", "danger")
+        redirect("/new")
+    
+    # Filter thru session data to figure out what keys NOT to upload to db
+    # Find keys present in session that are not in the target database,
+    # these keys will not be uploaded to the database.
+    differences = list( set(session.keys()) - set(data_cols.keys()) )
+    if not differences:
+        # If no differences are found
+        pass
+    else:
+        # If differences are found
+        print(f"\nDifferences found between target data location in database and session information:\n{differences}\nThese entries will not be uploaded to database!")
+        excluded += differences
+    
+    # Create a new id
+    subjectidnumber = get_new_id(reference_from=app_settings['unique_ids_from'])
+    
+    print(f"\nCreated user ID: { str(subjectidnumber) }.\n")
+    
     if request.method=="POST":
-        create_data_dir(participant_id)
+        create_data_dir(subjectidnumber)
         args = request.form.to_dict()
         # Grab these in this this way since they're arrays of checkboxes.
         args['vis_media'] = request.form.getlist('vis_media')
         args['hobbies'] = request.form.getlist('hobbies')
-        participant_data.update(args)
+        args.update( {'subjectidnumber': subjectidnumber,
+                      'exclude' : excluded} )
+        
+        # Update session
+        set_session_params(data=args, op='update', verbose=bool(app_settings['verbose']))
 
         return redirect('/choose_stories')
     
-    if participant_id == '':
-        participant_id = get_new_id(reference_from=app_settings['unique_ids_from'])
-    print(f"\nCreated user ID: { str(participant_id) }.\n")
-    return render_template('give_new_id.html', participant_id=participant_id)
+    return render_template('give_new_id.html', participant_id=str(subjectidnumber) )
 
 @app.route("/choose_stories", methods=['GET','POST'])
 def choose_stories():
-    global story_order
-    global story_num_overall
-    global current_story_indx
-    global STO_CH
-    # story_blurbs = get_blurbs()
+    story_order = session['story_order']
+    STO_CH = session['STO_CH']
+    subjectidnumber = session['subjectidnumber']
+    
+    # Fetch a list of story topics to display.
     story_blurbs = get_blurbs(story_relations)
-    # Empty story order in case the user backtracks through the windows.
-    # story_order = []
+    
     if request.method=="POST":
-
         prefs = request.form.to_dict()
-        pref_stories = [int(k) for (k,v) in prefs.items() if v]
-        not_pref_stories = [int(k) for k in range(1,len(story_blurbs)+1) if k not in pref_stories]
-        if len(pref_stories) < min_stories_to_choose:
+        
+        # Get topic preferences as number IDs for each checkbox
+        pref_topics = [story_blurbs[int(k)] for (k,v) in prefs.items() if v]
+        not_pref_topics = [story_blurbs[int(k)] for k in range(1,len(story_blurbs)+1) if story_blurbs[int(k)] not in pref_topics]
+        
+        # The amount of selected topics must be at least the minimum indicated
+        # in settings.
+        if len(pref_topics) < min_topics:
             return render_template("choose_stories_try_again.html", story_blurbs=story_blurbs,\
-                                   num_blurbs=len(story_blurbs), prev_yes=pref_stories, min_stories_to_choose = min_stories_to_choose)
-
-        pref_stories = [ story_blurbs[k] for k in pref_stories ]
-        print(f"\nUser preferred topics: { pref_stories }")
-        participant_data.update({  })
-        not_pref_topics = [ story_blurbs[k] for k in not_pref_stories ]
-        distribute_stories(pref_stories)
-        shuffle(story_order)
-        print(f"\nUser's generated story order: { story_order }\n")
-        participant_data.update({ 'next_story_index':current_story_indx,
-                                  'pref_stories': pref_stories,
-                                  'story_order': story_order })
+                                   num_blurbs=len(story_blurbs), prev_yes=[int(k) for (k,v) in prefs.items() if v], min_topics = min_topics)
+        
+        #print(f"\nUser preferred topics: { pref_topics }\nNon-preferences: { not_pref_topics }")
+        
+        # Create a story order
+        story_order = distribute_stories(pref_topics, session['story_order'])
+        if story_order is not None:
+            shuffle(story_order)
+        else:
+            print(f"Could not generate story order for user { session['subjectidnumber'] }. Please see above for error.")
+            return redirect(url_for('choose_stories'))
+        #print(f"\nUser's generated story order: { story_order }\n")
 
         ## add back in the rest of the stories at the end
-        # story_order = story_order + not_pref_stories
-        story_order = story_order + not_pref_topics
+        ## Why??
+        # story_order = story_order + not_pref_topics
         
         # If the user was re-routed here because their story preferences had
         # to be remade...
         if STO_CH:
+            # Update session
+            set_session_params(data = { 'pref_stories': pref_topics,
+                                        'not_pref_stories': not_pref_topics,
+                                        'story_order': story_order,
+                                        # Reset the story index to have them start their stories from
+                                        # the first one again.
+                                        'current_story_indx': 0,
+                                        'next_story_index': 0,
+                                        'STO_CH': 0 }, op='update', verbose=bool(app_settings['verbose']))
+            
             # Make a copy of their demographic data and overwrite 'story order'
             # and 'pref stories' to the new format.
-            replace_demdata(participant_id, {'story_order': story_order, 'pref_stories': pref_stories})
-            # Then reset the story index to have them start their stories from
-            # the first one again.
-            current_story_indx = 0
-            STO_CH = 0
+            replace_demdata(subjectidnumber, {'story_order': story_order, 'pref_stories': pref_topics})   
         else:
-            write_userdata_to_file(participant_id, 'demographic_info.txt', participant_data, exclude_keys=['session_notes', 'eye_tracker_data'], data_format='records')
-        
-        story_num_overall = story_order[current_story_indx]
+            # Update session
+            set_session_params(data = { 'pref_stories': pref_topics,
+                                        'not_pref_stories': not_pref_topics,
+                                        'current_story_indx': 0,
+                                        'next_story_index': 0,
+                                        'story_order': story_order }, 
+                               op='update',
+                               verbose=bool(app_settings['verbose']))
+            # print(app_settings['exclude_columns'])
+            write_userdata_to_file(subjectidnumber, 'demographic_info.txt',
+                                   session,
+                                   exclude_keys=session['exclude']\
+                                       + ["session_notes", "eye_tracker_data"]\
+                                       + ["tasktypedone", "reward_prefs",
+                                          "cost_prefs", "cost_level", 
+                                          "reward_level", "decision_made", 
+                                          "trial_index", "trial_start", 
+                                          "trial_end", "trial_elapsed", 
+                                          "relationship_level", "story_relevance"],
+                                   data_format='records')
 
-        return redirect('/story_num_overall')
+        return redirect('/states')
 
-    return render_template('choosing_stories.html', story_blurbs = story_blurbs, num_blurbs = len(story_blurbs), min_stories_to_choose = min_stories_to_choose)
+    return render_template('choosing_stories.html', story_blurbs = story_blurbs, num_blurbs = len(story_blurbs), min_topics = min_topics)
 
-
-@app.route("/not_new", methods=['GET','POST'])
-def not_new_participant():
-    global participant_id
-    global story_num_overall
-    global participant_data
-    
-    if request.method == "POST":
-        participant_id = request.form['participant_id']
-        print(f"\nRetrieved user ID: { str(participant_id) }.")
-        if participant_id not in os.listdir("data"):
-            demographics = import_demdata(participant_id, server)
-            parse_demdata(demographics, participant_id)
-                
-        get_starting_story_indx(participant_id, reference_from=app_settings['next_story_from'])
-        replace_demdata(participant_id, {'hunger':participant_data['hunger'],
-                                         'tired':participant_data['tired'],
-                                         'pain':participant_data['pain'],
-                                         'stress':participant_data['stress'],
-                                         'next_story_index':current_story_indx}, make_backup=False)
-        participant_data.update(get_demographic_info(participant_id))
-        # Attempt to get the story order. If the story order gets modified
-        # because it needs to be remade...
-        if get_story_order():
-            print("\nRedirecting user to /choose_stories...\n")
-            return redirect("/choose_stories")
-        # Otherwise continue as normal
-        else:
-            story_num_overall = story_order[current_story_indx]
-            return redirect("/story_num_overall")
-    
-    return render_template('welcome_back.html')
-
+# Shows what number story (in the session) the user is at, and the story theme
 @app.route('/story_num_overall')
 def story_num_refresh():
-    global story_num_overall
-    # blurbs = get_blurbs()
-    # blurb = blurbs[story_num_overall]
+    story_order = session['story_order']
+    story_num_overall  = session['story_num_overall']
+    current_story_indx = session['current_story_indx']
+    
+    # Get the current story
     story_num_overall = story_order[current_story_indx]
+    
+    # Update session info so these two values are not calculated every. single.
+    # time. >:C
+    task_type = story_num_overall.strip().split('/')[1]
+    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    
+    # Save session info
+    set_session_params(data={
+        'story_num_overall': story_num_overall,
+        'task_type': task_type,
+        'story_num': story_num }, op='update', verbose=bool(app_settings['verbose']))
     
     print(f"\nStarting story { story_num_overall }")
     story_info = get_story_info(story_num_overall, story_relations)
@@ -1275,14 +1589,15 @@ def story_num_refresh():
     
     return render_template('story_num.html', number=current_story_indx+1, content=blurb)
 
-## context - read from file, click next -> to reward pref
+# Shows the story context.
 @app.route('/context')
 def context():
-    global relationship_lvl
     # Determine the task type to know whether to proceed directly to cost if
     # the task type is cost_cost
-    task_type = story_num_overall.strip().split('/')[1]
-    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    story_num_overall = session['story_num_overall']
+    current_story_indx = session['current_story_indx']
+    task_type = session['task_type']
+    story_num = session['story_num']
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/context.txt"
@@ -1290,23 +1605,29 @@ def context():
     txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
-            txt, relationship_lvl = replace_all(txt, app_settings['relation_levels'])
-    print(f"replaced word {relationship_lvl}")
+            txt, relationship_level = replace_all(txt, app_settings['relation_levels'])
+            set_session_params(data={'relationship_level':relationship_level}, op='update', verbose=bool(app_settings['verbose']))
+        print(f"replaced word {relationship_level}")
     return render_template('context.html', content=txt, next_prefs=( 'cost' if task_type=='cost_cost' else 'reward' ))
 
 ## enter values (+ save), click next -> to cost pref
 ## enter values (+ save), click next -> to context refresh
 @app.route('/prefs/<cost_or_reward>', methods=['GET', 'POST'])
 def rank_prefs(cost_or_reward):
-    global cost_prefs
-    global reward_prefs
-
+    # Fetch story information from session
+    current_story_indx = session['current_story_indx']
+    story_num_overall = session['story_num_overall']
+    task_type = session['task_type']
+    story_num = session['story_num']
+    relationship_level = session['relationship_level']
+    
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
-    task_type = story_num_overall.split('/')[1]
-    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    
+    # Determine story identifiers and open the correct preferences file.
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
     txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
     
+    # Parse the preference options in the file
     options = txt.split("\n")
     options = [line.strip() for line in options if (line != '' and line != ' ')]
     opt_dict = {}
@@ -1315,22 +1636,29 @@ def rank_prefs(cost_or_reward):
             line = option.split(")")
             opt_num = int(line[0])
             opt_description = line[1].replace("’", "'")
+            # Social task types may require additional processing, namely
+            # randomizing the social descriptor which defines a relationship
             if task_type == 'social':
                 if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
-                    opt_description, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_lvl)
+                    opt_description, _ = replace_all(opt_description, app_settings['relation_levels'], replace_with=relationship_level)
             opt_dict[opt_num] = opt_description.strip()
-
+    
+    # Run this once the user submits their answers...
     if request.method == "POST":
         data = request.form.to_dict()
         vals = list(data.values())
+        # All entered values must be different, have the user try again if they
+        # are not.
         if len(vals) != len(set(vals)):
+            # Redirect to try_again if values do repeat
+            print(f"Warning: User entered repeated values:\n{vals}\nRendering template '{cost_or_reward}_try_again.html'...\n")
             try_again = f"{cost_or_reward}_try_again.html"
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            cost_prefs = data
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         else:
-            reward_prefs = data
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
 
         return redirect("/prefs/cost") if (cost_or_reward == 'reward' and task_type != 'benefit_benefit') else redirect("/refresh")
     
@@ -1340,33 +1668,37 @@ def rank_prefs(cost_or_reward):
 ## context refresh, click next -> trials
 @app.route('/refresh')
 def context_refresh():
-    global relevant_questions
-    task_type = story_num_overall.strip().split('/')[1]
-    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    current_story_indx = session['current_story_indx']
+    story_num_overall = session['story_num_overall']
+    task_type = session['task_type']
+    story_num = session['story_num']
+    relationship_level = session['relationship_level']
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/context.txt"
     txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
-            txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
-    relevant_questions = choose_questions()
+            txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_level)
+    set_session_params(data={ 'relevant_questions': choose_questions(session) }, op='update', verbose=bool(app_settings['verbose']))
+    # session['relevant_questions'] = choose_questions(session)
     return render_template('refresh.html', content=txt)
 
 @app.route('/want_change_prefs', methods=['GET'])
 def ask_if_change_prefs():
-    task_type = story_num_overall.split('/')[1]
+    task_type = session['task_type']
 
     return render_template('want_change_prefs.html', next_prefs=( 'cost' if task_type=='cost_cost' else 'reward' ))
 
 
-# after finishing trials, re-rank the prefs
+# After finishing trials, re-rank the prefs
 @app.route('/refresh_prefs/<cost_or_reward>', methods=['GET', 'POST'])
 def rank_prefs_again(cost_or_reward):
-    global cost_prefs
-    global reward_prefs
-    task_type = story_num_overall.strip().split('/')[1]
-    story_num = int(story_num_overall.strip().split('/')[-1].split('_')[-1])
+    current_story_indx = session['current_story_indx']
+    story_num_overall = session['story_num_overall']
+    task_type = session['task_type']
+    story_num = session['story_num']
+    relationship_level = session['relationship_level']
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
@@ -1382,7 +1714,7 @@ def rank_prefs_again(cost_or_reward):
             opt_description = line[1]
             if task_type == 'social':
                 if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
-                    txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_lvl)
+                    txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_level)
             opt_dict[opt_num] = opt_description.strip()
 
     if request.method == "POST":
@@ -1393,32 +1725,28 @@ def rank_prefs_again(cost_or_reward):
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            cost_prefs = data
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         else:
-            reward_prefs = data
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
         
         if app_settings['data_upload']:
-            write_trial_to_db((7,7), exclude_keys=['num_stories'])
+            write_trial_to_db((7,7), exclude_keys=session['exclude'])
 
         return redirect("/refresh_prefs/cost") if (cost_or_reward == 'reward' and task_type != 'benefit_benefit') else redirect("/trial_end")
 
     html = f"refresh_{cost_or_reward}_prefs.html"
     return render_template(html, len = len(options), opt_dict=opt_dict)
 
+# Trial page, this page repeats several times.
 @app.route('/trial/<loc_trial_num>', methods=['GET', 'POST'])
 def trial_html(loc_trial_num):
-    global current_story_indx
-    global trial_num
-    global max_story_indx
-    global trial_start
-    global trial_end
-    global current_question
-    global participant_data
-    global relationship_lvl
+    subjectidnumber = session['subjectidnumber']
+    current_story_indx = session['current_story_indx']
+    trial_index = session['trial_index']
+    task_type = session['task_type']
             
-    tup, q = relevant_questions[trial_num-1]
+    tup, q = session['relevant_questions'][trial_index-1]
 
-    # trial_start = time.gmtime()
     # Changing this to a datetime timestamp with timezone data to get
     # microsecond precision and be able to track when timestamps were made.
     trial_start = timezone.localize(datetime.now())
@@ -1434,7 +1762,7 @@ def trial_html(loc_trial_num):
         
         # Retrieve hr data, stop the data collection, and flush he container
         if HR_TRACKER_STATUS and not hr_settings['use_external_app']:
-            participant_data['heart_rate_data'] = deepcopy(hr_monitor.container)
+            session['heart_rate_data'] = deepcopy(hr_monitor.container)
             hr_monitor.set_flag(flush_data=True)
             # participant_data.update({'heart_rate_data': hr_data})
             # print(f"\nUpdated participant data with: {participant_data['heart_rate_data']}\nWith length: {len(participant_data['heart_rate_data'])}\n")
@@ -1444,20 +1772,27 @@ def trial_html(loc_trial_num):
             eyetracker.unsubscribe(frm=eye_settings['subscriptions'])        
             
         if app_settings['data_upload']:
-            write_trial_to_db(current_question, dec, trial_start, trial_end, exclude_keys=['num_stories'])
+            write_trial_to_db(current_question, dec, trial_start, trial_end, exclude_keys=session['exclude'])
 
-        next_trial = trial_num + 1
+        next_trial = trial_index + 1
         next_trial_str = '/trial/'+str(next_trial)
         
-        if trial_num + 1 < num_qs_in_story:
-            trial_num += 1
+        if next_trial < num_qs_in_story:
+            set_session_params({'trial_index': next_trial }, op='update', verbose=bool(app_settings['verbose']))
             return redirect(next_trial_str)
         else:
-            current_story_indx += 1
-            participant_data.update({'next_story_index':current_story_indx})
-            replace_demdata(participant_id, {'next_story_index':current_story_indx}, make_backup=False)
-            trial_num = 0
-            relationship_lvl = ''
+            # Update session to point to the next story and reset trial_index
+            # and relationship level.
+            next_story = int(session['next_story_index']) + 1
+            set_session_params(data={ 'current_story_indx': current_story_indx + 1,
+                                      'next_story_index'  : str(next_story),
+                                      'trial_index' : 0,
+                                      'relationship_level': '' },
+                               op='update',
+                               verbose=bool(app_settings['verbose']))
+            # Update demographic data file
+            replace_demdata(subjectidnumber, { 'next_story_index': next_story }, make_backup=False)
+            
             return redirect('/want_change_prefs')
     
     # Start collecting eye tracker data
@@ -1474,56 +1809,108 @@ def trial_html(loc_trial_num):
             hr_monitor.set_flag(data_capture=True)
             time.sleep(0.1)
     
-    task_type = story_num_overall.split('/')[1]
     if task_type in ['multi_choice', 'benefit_benefit', 'cost_cost']:
         split_question = q.split(' or ')
         optn_a = Markup(split_question[0])
         optn_b = Markup(split_question[-1])
-        return render_template('trial_a_or_b.html', trial_number=trial_num+1, optn_a=optn_a, optn_b=optn_b)
+        return render_template('trial_a_or_b.html', trial_number=trial_index+1, optn_a=optn_a, optn_b=optn_b)
     else:
         q = Markup(q)
-        return render_template('trial_n_y.html', trial_number=trial_num+1, question=q)
+        return render_template('trial_n_y.html', trial_number=trial_index+1, question=q)
 
+# Page where story relevance is requested.
 @app.route('/trial_end', methods=['GET','POST'])
 def get_story_relevance():
-    global story_prefs
-    global story_num_overall
+    story_num_overall = session['story_num_overall']
+    current_story_indx= session['current_story_indx']
+    max_story_indx    = session['max_story_indx']
 
     if request.method == "POST":
         data = request.form.to_dict()
         vals = list(data.values())
         rel = vals[0]
         
-        story_prefs[story_num_overall] = rel
+        # Update story_relevance dictionary in session this way to not
+        # overwrite the previous values
+        session['story_relevance'][story_num_overall] = rel
 
         return redirect('/story_num_overall') if current_story_indx <= max_story_indx else redirect('/total_end')
 
     return render_template('trial_end.html', story_num=current_story_indx)
 
-
+# Page for adding session notes.
 @app.route('/total_end', methods = ['GET', 'POST'])
 def total_end():
-    global NEED_RESET
-    global participant_data
-    # print(f"\n{story_prefs}")
-    task_type = story_num_overall.split('/')[1]
+    task_type  = session['task_type']
+    
     if app_settings['data_upload']:
-        write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=['num_stories'])
+        write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
 
-    NEED_RESET = 1  # Signal that the app parameters need to be reset.
+    set_session_params( data={'NEED_RESET': 1}, op='update', verbose=bool(app_settings['verbose']))  # Signal that the app parameters need to be reset.
     
     if request.method == "POST":
         data = request.form.to_dict()
         print(f"\nRetreived data: {data}\n")
-        participant_data.update(data)
-        # replace_demdata(participant_id, data)
+        set_session_params(data={ 'session_notes': data }, op='update', verbose=bool(app_settings['verbose']))
         if app_settings['data_upload']:
-            write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=['num_stories'])
+            write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
         
         if hr_settings['use_hrtracker'] and not hr_settings['use_external_app']:
             if (not hr_monitor is None) and (hr_monitor.is_alive()):
                 stop_hr_monitor(hr_monitor)
         
+        if session['NEED_RESET']:
+            # Clear the session.
+            session.clear()
+        
         return redirect('/')
     
-    return render_template('total_end.html')
+    return render_template('total_end.html', app_version='academic' if app_settings['academic_version']==1 else 'online')
+# -----------------------------------------------------------------------------
+
+# --------------------- Run this when app.py is executed ----------------------
+if __name__ == '__main__':
+    
+# ----------------------- Parse commandline arguments -------------------------
+    # Define the parser
+    argparser = ArgumentParser(add_help=False)
+    # Declare an argument, using a default value if the argument 
+    # isn't given
+    argparser.add_argument('-h', '--host', dest='host_ip', default=r'127.0.0.1')
+    argparser.add_argument('-p', '--port', dest='host_port', default='5000')
+    argparser.add_argument('-md', '--mode', dest='mode', default='prod')
+    argparser.add_argument('-th', '--threads', dest='threads', default='4')
+    # Now, parse the command line arguments and store the values in the 'args'
+    # variable.
+    args = argparser.parse_args()
+# -----------------------------------------------------------------------------
+
+# ------------------- Decide what server to run the app in --------------------
+    print(f"Running {'Waitress' if args.mode=='prod' else 'Flask'} WSGI server.")
+    if args.mode=='prod':
+        host_ip = args.host_ip
+        host_port = int(args.host_port)
+        threads = int(args.threads)
+        print(f"Forced 'academic_version' from {app_settings['academic_version']} to 0.")
+        app_settings.update( { 'academic_version': 0,
+                               'verbose': 0} )
+        
+        print("Waitress")
+        serve(app, host=host_ip, port=host_port, threads=threads, url_prefix='/humans-app')
+    elif args.mode=='local':
+        host_ip = args.host_ip
+        host_port = int(args.host_port)
+        app_settings.update( { 'verbose': 0 } )
+       
+        print("Flask")
+        # Runs regular flask server with debug=False
+        app.run(host=host_ip, port=host_port)
+    else:
+        host_ip = r"127.0.0.1"
+        host_port = int(args.host_port)
+        app_settings.update( { 'verbose': 1 } )
+
+        print("Flask (debug)")
+        # Runs local flask server in debug mode
+        app.run(host=host_ip, port=host_port, debug=True)
+# -----------------------------------------------------------------------------
