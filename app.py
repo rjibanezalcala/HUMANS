@@ -405,7 +405,9 @@ def get_new_id(reference_from='database'):
         raise Exception(f"\nParameter 'reference_from' was not recognised. Received {reference_from}, expected {str(expected_refs)}!")
         
     while True:
-        break
+        subjectidnumber = str(randint(10000,99999))
+        if subjectidnumber not in unique_ids:
+            break
 
     return subjectidnumber
 
