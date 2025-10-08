@@ -317,15 +317,15 @@ def replace_demdata(user, target_entries, make_backup=True):
 # keys in (target_entries) in the user's demographic_info.txt with each key's
 # value. Returns the path to the modified file.
     path = os.getcwd()
-    data_dir = path + "\\data\\" + str(user)
+    data_dir = path + "/data/" + str(user)
     
     # Create backup of old file if it doesn't exit.
     if make_backup:
-        if not os.path.exists(data_dir+"\demographic_info_old.txt"):
-            copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
+        if not os.path.exists(data_dir+"/demographic_info_old.txt"):
+            copy2(data_dir+"/demographic_info.txt", data_dir+"/demographic_info_old.txt")
     
     # Open the original file
-    with open(data_dir+"\demographic_info.txt", 'r') as f:
+    with open(data_dir+"/demographic_info.txt", 'r') as f:
         data = f.readlines()
     # Search the document from the bottom up for each entry in target_entries
     for i in range(len(data)-1, -1, -1):
@@ -337,10 +337,10 @@ def replace_demdata(user, target_entries, make_backup=True):
                 else:
                     data[i] = f"{ key }: { str(value) }"
     # Replace everything in the original file with the new information.
-    with open(data_dir+"\demographic_info.txt", 'w') as f:
+    with open(data_dir+"/demographic_info.txt", 'w') as f:
         f.writelines(data)
     
-    return data_dir+"\demographic_info.txt"
+    return data_dir+"/demographic_info.txt"
     
 def get_story_info(search_term, dictionary):
 # Since story blurbs were replaced with topics, it is necessary to know what
