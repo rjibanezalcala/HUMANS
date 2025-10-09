@@ -317,15 +317,15 @@ def replace_demdata(user, target_entries, make_backup=True):
 # keys in (target_entries) in the user's demographic_info.txt with each key's
 # value. Returns the path to the modified file.
     path = os.getcwd()
-    data_dir = path + "/data/" + str(user)
+    data_dir = path + "\\data\\" + str(user)
     
     # Create backup of old file if it doesn't exit.
     if make_backup:
-        if not os.path.exists(data_dir+"/demographic_info_old.txt"):
-            copy2(data_dir+"/demographic_info.txt", data_dir+"/demographic_info_old.txt")
+        if not os.path.exists(data_dir+"\demographic_info_old.txt"):
+            copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
     
     # Open the original file
-    with open(data_dir+"/demographic_info.txt", 'r') as f:
+    with open(data_dir+"\demographic_info.txt", 'r') as f:
         data = f.readlines()
     # Search the document from the bottom up for each entry in target_entries
     for i in range(len(data)-1, -1, -1):
@@ -337,10 +337,10 @@ def replace_demdata(user, target_entries, make_backup=True):
                 else:
                     data[i] = f"{ key }: { str(value) }"
     # Replace everything in the original file with the new information.
-    with open(data_dir+"/demographic_info.txt", 'w') as f:
+    with open(data_dir+"\demographic_info.txt", 'w') as f:
         f.writelines(data)
     
-    return data_dir+"/demographic_info.txt"
+    return data_dir+"\demographic_info.txt"
     
 def get_story_info(search_term, dictionary):
 # Since story blurbs were replaced with topics, it is necessary to know what
@@ -794,7 +794,6 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
         
     data = deepcopy(user_data)
     filepath = f"data/{user_id}/{filename}"
-    os.mkdir(f"data/{user_id}")
     expected_formats = ['records', 'raw']
     
     if include_keys != 'all':
@@ -1253,6 +1252,7 @@ def login():
             the legacy format.
         /states, if login is successful
     """
+    session.clear()
     excluded = app_settings['exclude_columns']
     if request.method == "POST":
     # Do the following once the 'submit' button on the ID form is pressed:
@@ -1291,7 +1291,7 @@ def login():
         
         # Initialise session data, check the boolean return status of
         # set_session_params()
-        if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
+        if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0)) ):
             flash("Could not initialize a session for user.", "danger")
             return redirect(url_for("login"))
         else:
@@ -1315,7 +1315,7 @@ def login():
             demographics.update({ 'subjectidnumber': subjectidnumber,
                                   'trial_index'    : 0 } | story_order) # Joins the two dictionaries, updating the first with the contents of the second
             demographics.update( { 'exclude': excluded } )
-            set_session_params( data=demographics, op='update', verbose=bool(app_settings['verbose']) )
+            set_session_params( data=demographics, op='update', verbose=bool(app_settings.get('verbose', 0)) )
             
             # Start using session data;
             # Check the STO_CH flag to determine if the user needs to re-make
@@ -1360,14 +1360,14 @@ def how_feel_pls():
                 'max_story_indx': int( story_indices[-1] ) - 1,
                 'current_story_indx': int( session['next_story_index'] ),
                 'story_num_overall': session['story_order'][int(session['next_story_index'])]
-                }, op='update', verbose=bool(app_settings['verbose']))
+                }, op='update', verbose=bool(app_settings.get('verbose', 0)))
             
             print("\nNext story found, redirecting user to story context for:")
             print(f"{session['story_num_overall']}\n")
         
         # Get subject's state data and save to session
         feeling = request.form.to_dict()
-        set_session_params(data=feeling, op='update', verbose=bool(app_settings['verbose']))
+        set_session_params(data=feeling, op='update', verbose=bool(app_settings.get('verbose', 0)))
         
         # The next page will only be the biometrics page if the app is set to
         # use the biometrics hardware AND the app is set as the academic
@@ -1448,7 +1448,7 @@ def setup_biometrics():
 def new_participant():
     excluded = app_settings['exclude_columns']
     # Try to set up a session
-    if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings['verbose'])):
+    if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0))):
         flash("Could not initialize a session for user.", "danger")
         redirect("/new")
     
@@ -1479,7 +1479,7 @@ def new_participant():
                       'exclude' : excluded} )
         
         # Update session
-        set_session_params(data=args, op='update', verbose=bool(app_settings['verbose']))
+        set_session_params(data=args, op='update', verbose=bool(app_settings.get('verbose', 0)))
 
         return redirect('/choose_stories')
     
@@ -1533,7 +1533,7 @@ def choose_stories():
                                         # the first one again.
                                         'current_story_indx': 0,
                                         'next_story_index': 0,
-                                        'STO_CH': 0 }, op='update', verbose=bool(app_settings['verbose']))
+                                        'STO_CH': 0 }, op='update', verbose=bool(app_settings.get('verbose', 0)))
             
             # Make a copy of their demographic data and overwrite 'story order'
             # and 'pref stories' to the new format.
@@ -1546,7 +1546,7 @@ def choose_stories():
                                         'next_story_index': 0,
                                         'story_order': story_order }, 
                                op='update',
-                               verbose=bool(app_settings['verbose']))
+                               verbose=bool(app_settings.get('verbose', 0)))
             # print(app_settings['exclude_columns'])
             write_userdata_to_file(subjectidnumber, 'demographic_info.txt',
                                    session,
@@ -1583,7 +1583,7 @@ def story_num_refresh():
     set_session_params(data={
         'story_num_overall': story_num_overall,
         'task_type': task_type,
-        'story_num': story_num }, op='update', verbose=bool(app_settings['verbose']))
+        'story_num': story_num }, op='update', verbose=bool(app_settings.get('verbose', 0)))
     
     print(f"\nStarting story { story_num_overall }")
     story_info = get_story_info(story_num_overall, story_relations)
@@ -1609,7 +1609,7 @@ def context():
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, relationship_level = replace_all(txt, app_settings['relation_levels'])
-            set_session_params(data={'relationship_level':relationship_level}, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params(data={'relationship_level':relationship_level}, op='update', verbose=bool(app_settings.get('verbose', 0)))
         print(f"replaced word {relationship_level}")
     return render_template('context.html', content=txt, next_prefs=( 'cost' if task_type=='cost_cost' else 'reward' ))
 
@@ -1659,9 +1659,9 @@ def rank_prefs(cost_or_reward):
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings.get('verbose', 0)))
         else:
-            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings.get('verbose', 0)))
 
         return redirect("/prefs/cost") if (cost_or_reward == 'reward' and task_type != 'benefit_benefit') else redirect("/refresh")
     
@@ -1683,7 +1683,7 @@ def context_refresh():
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_level)
-    set_session_params(data={ 'relevant_questions': choose_questions(session) }, op='update', verbose=bool(app_settings['verbose']))
+    set_session_params(data={ 'relevant_questions': choose_questions(session) }, op='update', verbose=bool(app_settings.get('verbose', 0)))
     # session['relevant_questions'] = choose_questions(session)
     return render_template('refresh.html', content=txt)
 
@@ -1728,9 +1728,9 @@ def rank_prefs_again(cost_or_reward):
             return render_template(try_again, len = len(options), opt_dict=opt_dict, vals=vals)
 
         if cost_or_reward == "cost":
-            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params(data={'cost_prefs': data}, op='update', verbose=bool(app_settings.get('verbose', 0)))
         else:
-            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params(data={'reward_prefs': data}, op='update', verbose=bool(app_settings.get('verbose', 0)))
         
         if app_settings['data_upload']:
             write_trial_to_db((7,7), exclude_keys=session['exclude'])
@@ -1781,7 +1781,7 @@ def trial_html(loc_trial_num):
         next_trial_str = '/trial/'+str(next_trial)
         
         if next_trial < num_qs_in_story:
-            set_session_params({'trial_index': next_trial }, op='update', verbose=bool(app_settings['verbose']))
+            set_session_params({'trial_index': next_trial }, op='update', verbose=bool(app_settings.get('verbose', 0)))
             return redirect(next_trial_str)
         else:
             # Update session to point to the next story and reset trial_index
@@ -1792,7 +1792,7 @@ def trial_html(loc_trial_num):
                                       'trial_index' : 0,
                                       'relationship_level': '' },
                                op='update',
-                               verbose=bool(app_settings['verbose']))
+                               verbose=bool(app_settings.get('verbose', 0)))
             # Update demographic data file
             replace_demdata(subjectidnumber, { 'next_story_index': next_story }, make_backup=False)
             
@@ -1849,12 +1849,12 @@ def total_end():
     if app_settings['data_upload']:
         write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
 
-    set_session_params( data={'NEED_RESET': 1}, op='update', verbose=bool(app_settings['verbose']))  # Signal that the app parameters need to be reset.
+    set_session_params( data={'NEED_RESET': 1}, op='update', verbose=bool(app_settings.get('verbose', 0)))  # Signal that the app parameters need to be reset.
     
     if request.method == "POST":
         data = request.form.to_dict()
         print(f"\nRetreived data: {data}\n")
-        set_session_params(data={ 'session_notes': data }, op='update', verbose=bool(app_settings['verbose']))
+        set_session_params(data={ 'session_notes': data }, op='update', verbose=bool(app_settings.get('verbose', 0)))
         if app_settings['data_upload']:
             write_trial_to_db((0,0) if not task_type in ['multi_choice'] else (0,0,0,0), exclude_keys=session['exclude'])
         
