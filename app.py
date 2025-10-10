@@ -318,7 +318,7 @@ def replace_demdata(user, target_entries, make_backup=True):
 # value. Returns the path to the modified file.
     path = os.getcwd()
     data_dir = path + "\\data\\" + str(user)
-    
+
     # Create backup of old file if it doesn't exit.
     if make_backup:
         if not os.path.exists(data_dir+"\demographic_info_old.txt"):
@@ -794,6 +794,8 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
         
     data = deepcopy(user_data)
     filepath = f"data/{user_id}/{filename}"
+    create_data_dir(user_id)
+
     expected_formats = ['records', 'raw']
     
     if include_keys != 'all':
