@@ -259,7 +259,7 @@ def import_demdata(subjectid, credentials, exclude_keys=['num_stories', 'next_st
 
 def create_data_dir(pid):
     path = os.getcwd()
-    dir_to_create = path + "\\data\\" + str(pid)
+    dir_to_create = path + "/data/" + str(pid)
     os.mkdir(dir_to_create)
     
     return dir_to_create
@@ -317,15 +317,15 @@ def replace_demdata(user, target_entries, make_backup=True):
 # keys in (target_entries) in the user's demographic_info.txt with each key's
 # value. Returns the path to the modified file.
     path = os.getcwd()
-    data_dir = path + "\\data\\" + str(user)
+    data_dir = path + "/data/" + str(user)
 
     # Create backup of old file if it doesn't exit.
     if make_backup:
-        if not os.path.exists(data_dir+"\demographic_info_old.txt"):
-            copy2(data_dir+"\demographic_info.txt", data_dir+"\demographic_info_old.txt")
+        if not os.path.exists(data_dir+"/demographic_info_old.txt"):
+            copy2(data_dir+"/demographic_info.txt", data_dir+"/demographic_info_old.txt")
     
     # Open the original file
-    with open(data_dir+"\demographic_info.txt", 'r') as f:
+    with open(data_dir+"/demographic_info.txt", 'r') as f:
         data = f.readlines()
     # Search the document from the bottom up for each entry in target_entries
     for i in range(len(data)-1, -1, -1):
@@ -337,10 +337,10 @@ def replace_demdata(user, target_entries, make_backup=True):
                 else:
                     data[i] = f"{ key }: { str(value) }"
     # Replace everything in the original file with the new information.
-    with open(data_dir+"\demographic_info.txt", 'w') as f:
+    with open(data_dir+"/demographic_info.txt", 'w') as f:
         f.writelines(data)
     
-    return data_dir+"\demographic_info.txt"
+    return data_dir+"/demographic_info.txt"
     
 def get_story_info(search_term, dictionary):
 # Since story blurbs were replaced with topics, it is necessary to know what
@@ -396,7 +396,7 @@ def get_new_id(reference_from='database'):
         
     elif reference_from == 'local':
         path = os.getcwd()
-        path += "\\data\\" 
+        path += "/data/" 
         unique_ids = set([ int(x) for x in re.findall("\d+", ' '.join(os.listdir(path))) ])
     elif reference_from == 'file':
         pass # Haven't done this yet
@@ -794,6 +794,7 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
         
     data = deepcopy(user_data)
     filepath = f"data/{user_id}/{filename}"
+    os.mkdir(f"data/{user_id}")
 
     expected_formats = ['records', 'raw']
     
@@ -1143,8 +1144,8 @@ dir_map = {}            # Will contain the a dictionary structure that describes
 wd = os.getcwd()
 # Create a 'data' directory if it doesn't exist in case app is run for the
 # first time.
-if not os.path.isdir( os.path.abspath(wd + '\\data' ) ):
-    os.mkdir( os.path.abspath(wd + '\\data' ) )
+if not os.path.isdir( os.path.abspath(wd + '/data' ) ):
+    os.mkdir( os.path.abspath(wd + '/data' ) )
 
 # 3. Parse app settings
 # Parse bin\settings.ini
