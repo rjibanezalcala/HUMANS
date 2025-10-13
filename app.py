@@ -1,6 +1,6 @@
 """
-Human Decision Making App v32.3.1
-09/October/2023 updated 18/Jun/2025
+Human Decision Making App v32.4.3
+09/October/2023 updated 13/Oct/2025
 @authors: Lara Rakocevic and Raquel Ibáñez Alcalá
 """
 ## Webserver-related imports
@@ -540,8 +540,7 @@ def choose_questions(sesh):
     relationship_level   = sesh['relationship_level']
     
     print(f"\nChoosing questions for current story: { story_num_overall }.")    # Should help with debugging
-    # path = f"stories/story_{story_num_overall}/questions.txt"
-    path = f"stories/task_types{story_num_overall}/questions.txt"
+    path = os.path.abspath(f"stories/task_types{story_num_overall}/questions.txt")
     txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
     lines = txt.split("\n")
     lines = [line.strip() for line in lines if (line != '' and line != ' ')]
@@ -571,7 +570,7 @@ def choose_questions(sesh):
         quest_dict.update({ keytup: question })
 
     # print('\n[choose_questions] quest_dict', quest_dict)
-    # print('\n[choose_questions] quest_dict', list(quest_dict.keys()))
+    print('\n[choose_questions] quest_dict', list(quest_dict.keys()))
 
     # Cost-cost and benefit-benefit tasks only have one set of prefs; I delete
     # the other set of prefs since these variables will likely contain the
@@ -958,35 +957,48 @@ def initialise_device(d, **kwargs):
     
 def replace_all(text, word_bank, replace_from=None, replace_with=None):
 # Replace the relationship word with one from the word bank
-    
-    # Remove "'s" from text and split words into list
-    split_text = [ re.split(r"'s", word)[0] for word in text.split(' ') ]
-    # If any word (where each word has punctuation removed) in the text appears in the word bank, process the text
-    if any(word in [ re.sub(r'[^\w\s\d]', '', x).lower() for x in split_text] for word in word_bank):
-        if replace_from is None:
-            matches = None
-            results = []
-            # Find all of those words and save them in a list
-            for word in word_bank:
-                matches = re.search(r'\b'+re.sub(r'[^\w\s\d]', '', word)+r'\b', ' '.join(split_text), re.IGNORECASE)
-                if not matches is None:
-                    matches = matches.group(0).lower()
-                    if not matches in results:
-                        results.append(matches)
-            print(f"\nFound matches in text! {results}")
-            # Sample as many words from the word bank as there are results
-            pick = sample(word_bank, len(results)) if replace_with is None else replace_with
-            print(f"Replacing matching results with: {pick}\n")
-            for i, word in enumerate(results):
-                # Replace EXACT match
-                text = re.sub(r'\b'+word+r'\b', pick[i], text)
-                text = re.sub(r'\b'+word.title()+r'\b', pick[i].title(), text)
-            
-            return text, pick
+    try:
+        # Remove "'s" from text and split words into list
+        split_text = [ re.split(r"'s", word)[0] for word in text.split(' ') ]
+        # If any word (where each word has punctuation removed) in the text appears in the word bank, process the text
+        if any(word in [ re.sub(r'[^\w\s\d]', '', x).lower() for x in split_text] for word in word_bank):
+            if replace_from is None:
+                matches = None
+                results = []
+                # Find all of those words and save them in a list
+                for word in word_bank:
+                    matches = re.search(r'\b'+re.sub(r'[^\w\s\d]', '', word)+r'\b', ' '.join(split_text), re.IGNORECASE)
+                    if not matches is None:
+                        matches = matches.group(0).lower()
+                        if not matches in results:
+                            results.append(matches)
+                print(f"\nFound matches in text! {results}")
+                # Sample as many words from the word bank as there are results
+                pick = sample(word_bank, len(results)) if replace_with is None else replace_with
+                print(f"Replacing matching results with: {pick}\n")
+                for i, word in enumerate(results):
+                    # Replace EXACT match
+                    text = re.sub(r'\b'+word+r'\b', pick[i], text)
+                    text = re.sub(r'\b'+word.title()+r'\b', pick[i].title(), text)
+                
+                return text, pick
+            else:
+                return text.replace(replace_from, replace_with), replace_with
         else:
-            return text.replace(replace_from, replace_with), replace_with
-    else:
-        return text, None
+            return text, None
+    except IndexError as e:
+        # In some cases, the number of results will be larger than the number
+        # of words to replace with, in this case, we simply pick another word
+        # and add it to the list.
+        print(f"\n[FUNCTION: replace_all()] Encountered the following error when trying to replace words for social task:\n\n{e}\nWhile replacing {results} with {pick}\n\nThis may be because the number of words to replace exceeds the number of words chosen to replace them with. Lists must be of equal lengths.\nSampling another word(s).")
+        pick += sample(word_bank, abs(len(results)-len(pick)))
+        set_session_params(data={'relationship_level':pick}, op='update', verbose=bool(app_settings.get('verbose', 0)))
+        print(f"Replacing matching results with: {pick}\n")
+        for i, word in enumerate(results):
+            # Replace EXACT match
+            text = re.sub(r'\b'+word+r'\b', pick[i], text)
+            text = re.sub(r'\b'+word.title()+r'\b', pick[i].title(), text)
+        return text, pick
 
 def set_session_params(data=None, op="update", exclude=[], verbose=False):
 # Allocates a dictionary in memory to save data into the flask-session data
@@ -1256,77 +1268,92 @@ def login():
     session.clear()
     excluded = app_settings['exclude_columns']
     if request.method == "POST":
-    # Do the following once the 'submit' button on the ID form is pressed:
-        # Grab the contents of the text field
-        subjectidnumber = request.form['subjectidnumber']
-        
-        # Validate the response
-        if not subjectidnumber.isnumeric() and not len(subjectidnumber) == 5:
-            print(f"\nAnswer to form '{subjectidnumber}' is not a valid ID number.\n")
-            flash("Invalid: Participant ID must be five a 5 digit number.", "danger")
-            return redirect(url_for("login"))
-        
-        print(f"\nValid participant ID retrieved is {subjectidnumber}")
-        
-        if subjectidnumber not in os.listdir("data"):
-        # If the participant ID does not exist in the local filesystem...
-            flash(f"Fetching data for ID {subjectidnumber}, please wait...", "info")
-            try: 
-                # Import the data related to that ID from the database and parse it.   
-                demographics = import_demdata(subjectidnumber, server)
-                if demographics is None:
-                    raise Exception("Importing user data from database failed.")
-            except Exception as e:
-                # If this process does not complete, alert the user and stay on page
-                print(f"\nCould not import data for user {subjectidnumber} due to error: {e}\n")
-                flash(f"Invalid: An error occured when loading data for user {subjectidnumber}. Please try a different user ID or select 'I'm a new participant'.", "danger")
+        if 'existing_participant' in request.form:    
+        # Do the following once the 'Log in' button on the ID form is pressed:
+            # Grab the contents of the text field
+            subjectidnumber = request.form['subjectidnumber']
+            print(request.form)
+            # Validate the response
+            if not subjectidnumber.isnumeric() and not len(subjectidnumber) == 5:
+                print(f"\nAnswer to form '{subjectidnumber}' is not a valid ID number.\n")
+                flash("Invalid: Participant ID must be five a 5 digit number.", "danger")
+                return redirect(url_for("login"))
+            
+            print(f"\nValid participant ID retrieved is {subjectidnumber}")
+            
+            if subjectidnumber not in os.listdir("data"):
+            # If the participant ID does not exist in the local filesystem...
+                flash(f"Fetching data for ID {subjectidnumber}, please wait...", "info")
+                try: 
+                    # Import the data related to that ID from the database and parse it.   
+                    demographics = import_demdata(subjectidnumber, server)
+                    if demographics is None:
+                        raise Exception("Importing user data from database failed.")
+                except Exception as e:
+                    # If this process does not complete, alert the user and stay on page
+                    print(f"\nCould not import data for user {subjectidnumber} due to error: {e}\n")
+                    flash(f"Invalid: An error occured when loading data for user {subjectidnumber}. Please try a different user ID or select 'I'm a new participant'.", "danger")
+                    return redirect(url_for("login"))
+                else:
+                    # If data is retrieved, save it to session data.
+                    print(f"\nSuccessfully retreived data for user ID {subjectidnumber} from database!\n")
+                    demographics = parse_demdata(demographics, subjectidnumber)[-1] # Parse data and save it locally
+            else:
+            # If the data does exist in the local filesystem...
+                # Load all of the user's data to the session
+                demographics = get_demographic_info(subjectidnumber, auto_parse=True)
+            
+            # Initialise session data, check the boolean return status of
+            # set_session_params()
+            if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0)) ):
+                flash("Could not initialize a session for user.", "danger")
                 return redirect(url_for("login"))
             else:
-                # If data is retrieved, save it to session data.
-                print(f"\nSuccessfully retreived data for user ID {subjectidnumber} from database!\n")
-                demographics = parse_demdata(demographics, subjectidnumber)[-1] # Parse data and save it locally
-        else:
-        # If the data does exist in the local filesystem...
-            # Load all of the user's data to the session
-            demographics = get_demographic_info(subjectidnumber, auto_parse=True)
-        
-        # Initialise session data, check the boolean return status of
-        # set_session_params()
-        if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0)) ):
-            flash("Could not initialize a session for user.", "danger")
-            return redirect(url_for("login"))
-        else:
-            # Filter thru session data to figure out what keys NOT to upload to db
-            # Find keys present in session that are not in the target database,
-            # these keys will not be uploaded to the database.
-            differences = list( set(session.keys()) - set(data_cols.keys()) )
-            if not differences:
-                # If no differences are found
-                pass
-            else:
-                # If differences are found
-                print(f"\nDifferences found between target data location in database and session information:\b{differences}\nThese entries will not be uploaded to database!")
-                excluded += differences
+                # Filter thru session data to figure out what keys NOT to upload to db
+                # Find keys present in session that are not in the target database,
+                # these keys will not be uploaded to the database.
+                differences = list( set(session.keys()) - set(data_cols.keys()) )
+                if not differences:
+                    # If no differences are found
+                    pass
+                else:
+                    # If differences are found
+                    print(f"\nDifferences found between target data location in database and session information:\b{differences}\nThese entries will not be uploaded to database!")
+                    excluded += differences
+                
+                # Validate story order (for compatibility with legacy version of
+                # the app).
+                story_order = get_story_order(subjectidnumber, ignore_legacy_story_data=app_settings['ignore_legacy_story_data'], validate_only=True, to_validate=demographics['story_order'])
+                
+                # Begin saving data to session
+                demographics.update({ 'subjectidnumber': subjectidnumber,
+                                      'trial_index'    : 0 } | story_order) # Joins the two dictionaries, updating the first with the contents of the second
+                demographics.update( { 'exclude': excluded } )
+                set_session_params( data=demographics, op='update', verbose=bool(app_settings.get('verbose', 0)) )
+                
+                # Start using session data;
+                # Check the STO_CH flag to determine if the user needs to re-make
+                # their story order.
+                if session['STO_CH']:
+                    print("\nRedirecting user to /choose_stories...\n")
+                    return redirect("/choose_stories")
+                # Otherwise continue as normal
+                else:
+                    return redirect("/states")
+        elif 'new_participant' in request.form:
+            # Try to set up a session
+            if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0))):
+                flash("Could not initialize a session for user.", "danger")
+                redirect("/new")
             
-            # Validate story order (for compatibility with legacy version of
-            # the app).
-            story_order = get_story_order(subjectidnumber, ignore_legacy_story_data=app_settings['ignore_legacy_story_data'], validate_only=True, to_validate=demographics['story_order'])
+            # Create a new id
+            if session.get('subjectidnumber', None) is None:
+                new_id = get_new_id(reference_from=app_settings['unique_ids_from'])
+                print(f"\nCreated user ID: { str(new_id) }.\n")
             
-            # Begin saving data to session
-            demographics.update({ 'subjectidnumber': subjectidnumber,
-                                  'trial_index'    : 0 } | story_order) # Joins the two dictionaries, updating the first with the contents of the second
-            demographics.update( { 'exclude': excluded } )
-            set_session_params( data=demographics, op='update', verbose=bool(app_settings.get('verbose', 0)) )
-            
-            # Start using session data;
-            # Check the STO_CH flag to determine if the user needs to re-make
-            # their story order.
-            if session['STO_CH']:
-                print("\nRedirecting user to /choose_stories...\n")
-                return redirect("/choose_stories")
-            # Otherwise continue as normal
-            else:
-                return redirect("/states")
+            # Save to session
+            set_session_params(data={'subjectidnumber': new_id}, op='update', verbose=bool(app_settings.get('verbose', 0)))
+            return redirect( url_for('new_participant') )
     
     return render_template('login.html')
 
@@ -1448,41 +1475,31 @@ def setup_biometrics():
 @app.route("/new", methods=['GET', 'POST'])
 def new_participant():
     excluded = app_settings['exclude_columns']
-    # Try to set up a session
-    if not set_session_params(data=list(data_cols.keys()), op='set/reset', verbose=bool(app_settings.get('verbose', 0))):
-        flash("Could not initialize a session for user.", "danger")
-        redirect("/new")
-    
-    # Filter thru session data to figure out what keys NOT to upload to db
-    # Find keys present in session that are not in the target database,
-    # these keys will not be uploaded to the database.
-    differences = list( set(session.keys()) - set(data_cols.keys()) )
-    if not differences:
-        # If no differences are found
-        pass
-    else:
-        # If differences are found
-        print(f"\nDifferences found between target data location in database and session information:\n{differences}\nThese entries will not be uploaded to database!")
-        excluded += differences
-    
-    # Create a new id
-    subjectidnumber = get_new_id(reference_from=app_settings['unique_ids_from'])
-    
-    print(f"\nCreated user ID: { str(subjectidnumber) }.\n")
+    subjectidnumber = session['subjectidnumber']
     
     if request.method=="POST":
+        print(request.form)
         create_data_dir(subjectidnumber)
         args = request.form.to_dict()
         # Grab these in this this way since they're arrays of checkboxes.
         args['vis_media'] = request.form.getlist('vis_media')
         args['hobbies'] = request.form.getlist('hobbies')
-        args.update( {'subjectidnumber': subjectidnumber,
-                      'exclude' : excluded} )
+        
+        # Filter thru session data to figure out what keys NOT to upload to db
+        # Find keys present in session that are not in the target database,
+        # these keys will not be uploaded to the database.
+        differences = list( set(session.keys()) - set(data_cols.keys()) )
+        if differences:
+            # If differences are found
+            print(f"\nDifferences found between target data location in database and session information:\n{differences}\nThese entries will not be uploaded to database!")
+            excluded += differences
+        
+        args.update( {'exclude' : excluded} )
         
         # Update session
         set_session_params(data=args, op='update', verbose=bool(app_settings.get('verbose', 0)))
-
-        return redirect('/choose_stories')
+        
+        return redirect(url_for('choose_stories'))
     
     return render_template('give_new_id.html', participant_id=str(subjectidnumber) )
 
