@@ -793,7 +793,6 @@ def write_userdata_to_file(user_id, filename, user_data, end_line='\n', include_
         
     data = deepcopy(user_data)
     filepath = f"data/{user_id}/{filename}"
-    os.mkdir(f"data/{user_id}")
 
     expected_formats = ['records', 'raw']
     
