@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Sep  1 20:20:40 2023
-eyetracker_lib.py v0.1
+eyetracker_lib.py v0.2 (updated October 27, 2025)
 @author: Raquel Ibáñez Alcalá
 """
 
-#import tobii_research as tr
+import tobii_research as tr
 from time import sleep
 from os import path
 from subprocess import run
@@ -19,7 +19,7 @@ class EyeTracker:
         self.flags    = { 'active':False }   # Flags to show device status
         self.my_eyetracker = None
     
-    def connect_eyetracker(self, tracker_index=0):
+    def connect_eyetracker(self, tracker_index=0, show_capability=False, sampling_frequency=None):
         # Search local system and network for connected eye trackers...
         print("\n  Finding all eye trackers in network...")
         found_eyetrackers = tr.find_all_eyetrackers()
@@ -31,6 +31,52 @@ class EyeTracker:
         print("    Model: " + self.my_eyetracker.model)
         print("    Name (It's OK if this is empty): " + self.my_eyetracker.device_name)
         print("    Serial number: " + self.my_eyetracker.serial_number)
+        
+        initial_gaze_output_frequency = self.my_eyetracker.get_gaze_output_frequency()
+        print(f"\nThe eye tracker's initial gaze output frequency is {initial_gaze_output_frequency} Hz.")
+        print("Frequencies supported by this eyetracker are:")
+        for gaze_output_frequency in self.my_eyetracker.get_all_gaze_output_frequencies():
+            print(f"  {gaze_output_frequency} Hz")
+        
+        if not sampling_frequency is None:
+            print("\nModifying sampling frequency to {sampling_frequency}......", end="")
+            try:
+                self.my_eyetracker.set_gaze_output_frequency(sampling_frequency)
+            except Exception as e:
+                print(f"failed!\nSee error:\n{e}")
+            else:
+                print("success!")
+        
+        if show_capability:
+            print("")
+            if tr.CAPABILITY_CAN_SET_DISPLAY_AREA in self.my_eyetracker.device_capabilities:
+                print("The display area can be set on the eye tracker.")
+            else:
+                print("The display area can not be set on the eye tracker.")
+            if tr.CAPABILITY_HAS_EXTERNAL_SIGNAL in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can deliver an external signal stream.")
+            else:
+                print("The eye tracker can not deliver an external signal stream.")
+            if tr.CAPABILITY_HAS_EYE_IMAGES in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can deliver an eye image stream.")
+            else:
+                print("The eye tracker can not deliver an eye image stream.")
+            if tr.CAPABILITY_HAS_GAZE_DATA in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can deliver a gaze data stream.")
+            else:
+                print("The eye tracker can not deliver a gaze data stream.")
+            if tr.CAPABILITY_CAN_DO_SCREEN_BASED_CALIBRATION in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can do a screen based calibration.")
+            else:
+                print("The eye tracker can not do a screen based calibration.")
+            if tr.CAPABILITY_CAN_DO_MONOCULAR_CALIBRATION in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can do a monocular calibration.")
+            else:
+                print("The eye tracker can not do a monocular calibration.")
+            if tr.CAPABILITY_HAS_EYE_OPENNESS_DATA in self.my_eyetracker.device_capabilities:
+                print("The eye tracker can deliver an eye openness data stream.")
+            else:
+                print("The eye tracker can not deliver an eye openness data stream.")
         
     def call_eye_tracker_manager(self):
         print("\nCalling Tobii Eye Tracker Manager for calibration routine...\n  App will hang until the Manager is closed.")
@@ -144,7 +190,7 @@ if __name__ == "__main__":
     USER = ''
     INSTALL_PATH = r'C:\Users\{USER}\AppData\Local\Programs\TobiiProEyeTrackerManager\TobiiProEyeTrackerManager.exe'
     tracker = EyeTracker(manager_install_path=path.abspath(INSTALL_PATH))
-    tracker.connect_eyetracker()
+    tracker.connect_eyetracker(show_capability=True)
     # END Setup -------------------------------------------------------------------
     
     # # Calibrate eye tracker using UI, run the exe as a subprocess...
