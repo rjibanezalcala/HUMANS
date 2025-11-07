@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<h3> If you are here, you have completed {{completed_stories}} out of {{total_stories}} stories and have no more stories to complete. You do not need to continue. </br></br>
+<i> (If you would like to continue contibuting to our efforts, please create a new ID number!) </i></br></br>
+Thank you for your contribution! </h3>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="center2">
+	<form method="POST">
+		{%if app_version=='academic'%}
+		<div class="personal-info" id="notes">
+			<label for="session-notes">Experimenter notes:</label>
+			<textarea name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!! Please write your notes in a single paragraph!"></textarea>
+			<!-- <input type="text" name="session_notes" id="session-notes" placeholder="For experimenter/lab technician use ONLY!"/> -->
+		</div>
+		{%endif%}
+		
+		<input type="submit" class="btn btn-success" value="Finished!"/>
+		
+	</form>
+</div>
+
+</div>
+
+{% endblock %}
