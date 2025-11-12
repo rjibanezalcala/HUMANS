@@ -1,6 +1,6 @@
-1) go online to buy your ticket, and there are abundant seats in your favorite spot to sit
-2) see that the theatre lobby has displays of memorabilia from your favorite movie that you can look at
-3) go to a panel discussion with the director of the movie immediately after the show
-4) buy the tickets are half-price
-5) show
-6) go to a theater that has a food delivery service that will bring takeout to your seat
+1) When you go online to buy your ticket, there are abundant seats in your favorite spot to sit.
+2) The theatre lobby has displays of memorabilia from your favorite movie that you can look at.
+3) There will be a panel discussion with the director of the movie immediately after the show.
+4) The tickets are half-price.
+5) You can get a ticket for the IMAX version of the movie for the same price as the regular (non-IMAX) show.
+6) The theater has a food delivery service that will bring takeout to your seat.

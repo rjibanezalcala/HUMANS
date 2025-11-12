@@ -1,6 +1,6 @@
-1) go for a run
-2) do a Pilates workout
-3) lift weights
-4) do an activity that helps you improve your skill at your favorite sport
-5) do an activity that will improve your mood
-6) be skilled at the activity you choose
+1) You go for a run.
+2) You do a Pilates workout.
+3) You lift weights.
+4) The activity will help you become better at sports.
+5) The activity will improve your mood.
+6) You are skilled at this activity.

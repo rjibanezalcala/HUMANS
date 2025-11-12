@@ -1,0 +1,28 @@
+hunger: None
+tired: None
+pain: None
+stress: None
+sex: male
+genderid: male
+menstruation: < 1week
+age: Under 18
+weight: < 90lbs
+race: white
+ethnicity: hispanic/latino or spanish origin
+relationship_status: single
+sexual_orientation: homosexual
+education: freshman
+college: education
+major: 
+exercise: < once/week
+exercise_time_min: 9
+exercise_time_max: 9
+caffeine: none
+nicotine: none
+alcohol: none
+vis_media: []
+hobbies: []
+next_story_index: 0
+pref_stories: ['Vehicle/Transportation', 'Medical', 'Entertainment', 'Trip']
+story_order: ['/approach_avoid/story_9', '/approach_avoid/story_3', '/probability/story_13', '/approach_avoid/story_12', '/probability/story_15', '/approach_avoid/story_6', '/approach_avoid/story_18', '/probability/story_22', '/probability/story_2', '/approach_avoid/story_2', '/probability/story_4', '/approach_avoid/story_22', '/probability/story_8', '/probability/story_14', '/probability/story_23', '/approach_avoid/story_7', '/probability/story_1', '/probability/story_21', '/approach_avoid/story_1', '/probability/story_7', '/probability/story_24', '/approach_avoid/story_19', '/approach_avoid/story_15', '/approach_avoid/story_10']
+subjectidnumber: 77474

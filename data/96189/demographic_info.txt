@@ -1,0 +1,28 @@
+hunger: None
+tired: None
+pain: None
+stress: None
+sex: male
+genderid: male
+menstruation: < 1week
+age: Under 18
+weight: < 90lbs
+race: white
+ethnicity: hispanic/latino or spanish origin
+relationship_status: single
+sexual_orientation: homosexual
+education: freshman
+college: education
+major: 
+exercise: < once/week
+exercise_time_min: 9
+exercise_time_max: 9
+caffeine: none
+nicotine: none
+alcohol: none
+vis_media: []
+hobbies: []
+next_story_index: 0
+pref_stories: ['Entertainment', 'Trip', 'Education-Post-Education Life', 'Shopping']
+story_order: ['/approach_avoid/story_35', '/approach_avoid/story_21', '/approach_avoid/story_30', '/approach_avoid/story_56', '/approach_avoid/story_52', '/approach_avoid/story_6', '/approach_avoid/story_28', '/approach_avoid/story_26', '/approach_avoid/story_43', '/approach_avoid/story_62', '/approach_avoid/story_49', '/approach_avoid/story_36']
+subjectidnumber: 96189

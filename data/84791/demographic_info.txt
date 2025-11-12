@@ -1,0 +1,28 @@
+hunger: None
+tired: None
+pain: None
+stress: None
+sex: male
+genderid: male
+menstruation: < 1week
+age: Under 18
+weight: < 90lbs
+race: white
+ethnicity: hispanic/latino or spanish origin
+relationship_status: single
+sexual_orientation: homosexual
+education: freshman
+college: education
+major: 
+exercise: < once/week
+exercise_time_min: 9
+exercise_time_max: 9
+caffeine: none
+nicotine: none
+alcohol: none
+vis_media: []
+hobbies: []
+next_story_index: 1
+pref_stories: ['Entertainment', 'Trip', 'Education-Post-Education Life', 'Shopping']
+story_order: ['/probability/story_3', '/approach_avoid/story_42', '/probability/story_24', '/probability/story_17', '/probability/story_8', '/approach_avoid/story_6', '/approach_avoid/story_4', '/probability/story_21', '/probability/story_15', '/approach_avoid/story_31', '/approach_avoid/story_63', '/probability/story_26', '/approach_avoid/story_44', '/approach_avoid/story_41', '/approach_avoid/story_61', '/approach_avoid/story_14', '/probability/story_14', '/approach_avoid/story_43', '/probability/story_10', '/probability/story_22', '/probability/story_1', '/probability/story_9', '/approach_avoid/story_10', '/approach_avoid/story_3']
+subjectidnumber: 84791

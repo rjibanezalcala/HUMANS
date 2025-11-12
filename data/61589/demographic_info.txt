@@ -1,0 +1,28 @@
+hunger: None
+tired: None
+pain: None
+stress: None
+sex: male
+genderid: male
+menstruation: < 1week
+age: Under 18
+weight: < 90lbs
+race: white
+ethnicity: hispanic/latino or spanish origin
+relationship_status: single
+sexual_orientation: homosexual
+education: freshman
+college: education
+major: 
+exercise: < once/week
+exercise_time_min: 9
+exercise_time_max: 9
+caffeine: none
+nicotine: none
+alcohol: none
+vis_media: []
+hobbies: []
+next_story_index: 0
+pref_stories: ['Vehicle/Transportation', 'Party', 'Trip', 'Education-Post-Education Life']
+story_order: ['/approach_avoid/story_7', '/approach_avoid/story_40', '/approach_avoid/story_32', '/approach_avoid/story_39', '/approach_avoid/story_58', '/approach_avoid/story_30', '/approach_avoid/story_61', '/approach_avoid/story_11', '/approach_avoid/story_13', '/approach_avoid/story_38', '/approach_avoid/story_1', '/approach_avoid/story_50']
+subjectidnumber: 61589

@@ -1,6 +1,6 @@
-1) buy a pretzel
-2) buy a hot dog
-3) buy nachos
-4) buy fries
-5) buy ice cream
-6) buy a snow cone
+1) You buy a pretzel.
+2) You buy a hot dog.
+3) You buy nachos.
+4) You buy french fries.
+5) You buy ice cream.
+6) You buy a snow cone.

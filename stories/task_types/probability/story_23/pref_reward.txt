@@ -1,6 +1,6 @@
-1) Go for a scenic road trip with friends, enjoying the freedom of the open road, beautiful landscapes, and the opportunity to make spontaneous stops
-2) Choose a convenient and hassle-free flight to your destination, saving time and providing a comfortable journey with in-flight amenities
-3) Opt for a train trip, enjoying the scenic views, spacious seating, and the ability to relax and socialize during the journey
-4) Pick a ferry or boat ride, allowing you to enjoy the water, stunning coastal views, and potentially unique experiences like spotting marine life
-5) Decide on a cycling or biking adventure, providing an eco-friendly and active way to explore your destination, while enjoying the outdoors
-6) Select a mode of transportation that offers a combination of comfort and sightseeing, such as a luxury bus or coach tour with informative guides
+1) You might go for a run.
+2) You might do a Pilates workout.
+3) You might lift weights.
+4) The activity might help you become better at sports.
+5) The activity might improve your mood.
+6) You might be skilled at this activity.
