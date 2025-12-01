@@ -4,7 +4,7 @@ Human Decision Making App v32.4.4
 @authors: Lara Rakocevic and Raquel Ibáñez Alcalá
 """
 ## Webserver-related imports
-from flask import Flask, render_template, redirect, request, session, flash, url_for, template_rendered, make_response
+from flask import Flask, render_template, redirect, request, session, flash, url_for, template_rendered, make_response, send_from_directory
 from flask_session import Session
 #from flask_limiter import Limiter
 #from flask_limiter.util import get_remote_address
@@ -33,6 +33,7 @@ from secrets import token_hex
 ## Custom libraries
 from eyetracker_lib import EyeTracker
 from heartrate_lib import HRMonitorThread
+from pdf_signer import PDFSigner
 
 # -------------------------- Configure flask session --------------------------
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -260,9 +261,10 @@ def import_demdata(subjectid, credentials, exclude_keys=['num_stories', 'next_st
 def create_data_dir(pid):
     path = os.getcwd()
     dir_to_create = os.path.abspath(f"{path}/data/{str(pid)}")
-    os.mkdir(dir_to_create)
-    
-    return dir_to_create
+    try:
+        os.mkdir(dir_to_create)
+    finally:
+        return dir_to_create
 
 def parse_demdata(data, subjectid):
     # Parses demographic data returned by 'import_demdata()' and generates a
@@ -1128,6 +1130,40 @@ def log_template_renders(sender, template, context, **extra):
         session['trial_start'] = (timestamp, page)
         session['trial_end'] = (None, None)
         print(f"[SIGNAL.TEMPLATE_RENDERED] Logged 'trial_start'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}")
+
+def sign_pdf(idno, name, signature, proxysignature=None, stamp_document=True, include_timestamp=True):
+    signer = PDFSigner(output_dir=os.path.abspath(f"{os.getcwd()}/data/{idno}"),
+                       output_name=f"informed_consent_signed_{idno}",
+                       ts_region=app_settings.get('timestamp_timezone', 'UTC'))
+    
+    if not os.path.isdir(signer.output_dir):
+        signer.make_directory()
+    
+    try:
+        document = signer.open_pdf()
+        
+        # Sign participant's name
+        signer.sign_name(document, name, line_index=[0])
+        # Sign date in both "Date" lines
+        signer.sign_date(document, signer.ts_short, line_index=[2,4])
+        # Sign participant's initials
+        signer.sign_initials(document, signature, line_index=[1])
+        # Sign guardian's initials (if applicable)
+        if not proxysignature is None:
+            signer.sign_initials(document, proxysignature, line_index=[3])
+        # Stamp document to attest that is was signed electronically
+        if stamp_document:
+            signer.stamp_pdf(document)
+        # Add a timestamp
+        if include_timestamp:
+            signer.writeonpdf(document, datetime.now(signer.ts_region).strftime(signer.ts_format),
+                              x=230, y=730, use_selfcoords=False)
+        
+        signer.save_pdf()
+    finally:
+        signer.close_pdf()
+        del document, signer   
+    
 # -----------------------------------------------------------------------------
 
 # ------------------------------- Initialize app ------------------------------
@@ -1414,9 +1450,57 @@ def login():
             
             # Save to session
             set_session_params(data={'subjectidnumber': new_id}, op='update', verbose=bool(app_settings.get('verbose', 0)))
-            return redirect( url_for('new_participant') )
+            return redirect( url_for('consent') )
     
     return render_template('login.html')
+
+# Consent form
+@app.route("/consent", methods=["GET", "POST"])
+def consent():
+    """
+    Use will be routed here upon pressing the "I'm a new participant" button
+    in the login page.
+    This page includes a consent form which asks for the participant's name, 
+    participant's initials, and, if applicable, the initials of whomever is
+    obtaining consent in their stead.
+    Inputs are validated upon POST. If inputs are invalid, the page refreshes
+    and a message is displayed on top of the page.
+    """
+
+    if request.method == "POST":
+        data = request.form.to_dict()
+        # Validate input: Input must match the following two patterns,
+        # otherwise participant is not allowed to continue.
+        for key, value in data.items():
+            pattern_names = r'^[A-Za-z]+(?:[ -][A-Za-z]+)*$'
+            # Pattern explanation: String must start with one or more letters
+            # and contain 2 or more all-letter-words separated by a hyphen (-)
+            # or a space.
+            pattern_initials = r'\b(?:[A-Z]\.?){2,}\b'
+            # Pattern explanation: String must be two or more capital letters
+            # optionally separated by a period (.).
+            
+            if not value == '' and not bool( re.search(pattern_names, value) ):
+                # If the string does not match this pattern for names, check if
+                # it's initials...
+                if not bool( re.search(pattern_initials, value) ):
+                    print(f"Detected non-compliant string in key '{key}' with value '{value}'")
+                    flash("Name and last name fields must have one or more words containing only letters, separated by either a space or a hyphen (-). Initials fields must be only capital letters optionally separated by a period (.).", "danger")
+                    return render_template("consent_form.html")                
+        
+        # Check if the file exists
+        if not os.path.exists( os.path.abspath(fr"{os.getcwd()}/data/{session['subjectidnumber']}/informed_consent_signed_{session['subjectidnumber']}.pdf") ):
+            sign_pdf(session.get('subjectidnumber'), f"{data['fname']} {data['lname']}", data['initials'],
+                     proxysignature=data['proxyinit'] if not data['proxyinit'] == '' or None else None,
+                     stamp_document=True, include_timestamp=True)
+        
+        if 'continue' in request.form:
+            return redirect( url_for('new_participant') )
+        elif 'download' in request.form:
+            path = os.path.abspath( f"{os.getcwd()}/data/{session['subjectidnumber']}" )
+            return send_from_directory(path, f"informed_consent_signed_{session['subjectidnumber']}.pdf", as_attachment=True)
+        
+    return render_template("consent_form.html")
 
 # Page for entering emotional/physiological state information
 @app.route("/states", methods=['GET', 'POST'])
