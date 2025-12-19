@@ -135,6 +135,46 @@ pad {
     column-gap: 15px;
 }
 
+div.verify-table-container {
+	overflow-x: auto;
+}
+
+table.verify-table {
+	display: block;
+	border-collapse: collapse;
+	margin-left: auto;
+	margin-right: auto;
+	border: 1px dashed #00000021;
+	border-radius: 10px;
+	margin-top: 5%;
+}
+
+.verify-column {
+	text-align: center;
+	align-content: center;
+	align-items: center;
+}
+
+div.verify-column-container {
+	display: grid;
+	place-items: center;
+	justify-content: center;
+}
+
+.verify-paragraph {
+	text-align: left;
+}
+
+.exception {
+	color: red;
+	font-weight: bold;
+}
+
+.textarea-wide {
+	width: 30vw;
+}
+
+
 .pad {
     padding:60px;
 }
@@ -427,6 +467,11 @@ input[type="checkbox"] {
   place-content: center;
 }
 
+input[type="checkbox"].check-large {
+  width: 4em;
+  height: 4em;
+}
+
 /* On mouse-over, add a grey background color */
 input[type="checkbox"]:hover{
   background-color: #eee;
@@ -440,14 +485,31 @@ input[type=checkbox]::before {
   transition: 120ms transform ease-in-out;
 }
 
+input[type=checkbox].check-large::before {
+  content: '⚑';
+  color: white;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+}
+
 /* What to do between as box is being checked */
 input[type="checkbox"]:checked::before {
   transform: scale(1);
 }
 
+input[type="checkbox"].check-large:checked::before {
+  transform: scale(4);
+}
+
 /* When the checkbox is checked, add a blue background and change border */
 input[type="checkbox"]:checked{
   background-color: #3a79fc;
+  border: 0.1em solid currentColor;
+  border-radius: 0.15em;
+}
+
+input[type="checkbox"].check-large:checked{
+  background-color: #f54242;
   border: 0.1em solid currentColor;
   border-radius: 0.15em;
 }
