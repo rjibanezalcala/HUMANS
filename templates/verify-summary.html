@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% include 'message.html' %}
+<h3> Story verifier </h3>
+
+{% endblock %}
+
+{% block subheader %}
+
+<h2> Summary </h2>
+
+{% endblock %}
+
+{% block content %}
+
+<div class='center2'>
+	<form method="post">
+		<div class="personal-info" id="summary-message">
+			<p>{{ summary }}</p>
+		</div>
+		
+		<input type="submit" class="btn btn-primary" value="Finish"/>
+	</form>
+</div>
+
+{%endblock %}
+
+
+

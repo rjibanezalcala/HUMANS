@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% include 'message.html' %}
+<h3> Story verifier </h3>
+
+{% endblock %}
+
+{% block subheader %}
+
+<h2> Session setup </h2>
+
+{% endblock %}
+
+{% block content %}
+
+<div class='center2'>
+	<form method="post">
+		<div class="personal-info" id="tasktype">
+			<span class="instructions"></span>
+			
+			<label for="task">Task type:</label> </dt>
+			<select name="task" id="tasktypedrop" title="Select a task type (required)." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				{% for item in task_types %}
+				<option class="select-option" value={{ item }}>{{ item }}</option>
+				{% endfor %}
+			</select>
+			
+			<label for="story">Story or range of stories:</label>
+			<input type="text" name="story0" id="storynum0" placeholder="1" required>
+			<label for="story">through</label>
+			<input type="text" name="story1" id="storynum1" placeholder="25" required>
+		</div>
+		
+		<input type="submit" class="btn btn-primary"/>
+	</form>
+</div>
+
+{%endblock %}
+
+
+
