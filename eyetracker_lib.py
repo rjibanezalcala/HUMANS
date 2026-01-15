@@ -5,7 +5,7 @@ eyetracker_lib.py v0.2 (updated October 27, 2025)
 @author: Raquel Ibáñez Alcalá
 """
 
-#import tobii_research as tr
+import tobii_research as tr
 from time import sleep
 from os import path
 from subprocess import run
@@ -237,4 +237,5 @@ if __name__ == "__main__":
 #   Time stamps in the Tobii Pro SDK are generally given in microseconds.
 # Validity codes - each individual kind of data relating to the eye is provided
 #   with its own validity code which can only have one out of two possible
+
 #   values: valid or invalid.
