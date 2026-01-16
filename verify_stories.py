@@ -336,71 +336,29 @@ def summary():
     if request.method == 'POST':
         return redirect("/")
     return render_template('verify-summary.html',
-                           summary = f"Summary log has been written to {getcwd()}/verify-log_{session.get('ts')}.txt" )
+                           summary = f"Summary log has been written to {getcwd()}\verify-log_{session.get('ts')}.txt" )
 
 # --------------------- Run this when script is executed ----------------------
 if __name__ == '__main__':
-    verify = StoryVerify( sto_dir=path.abspath(r"D:\Documents\Human DM Project\Decision Making App\dec-making-app-live\HUMANS\stories\task_types"),
-                          encoder='cp1252',
-                          verbose=0 )
-    verify.open_story('benefit_benefit', '2')
-    context = verify.parse_context()
-    pref_cost = verify.parse_cost()
-    pref_reward = verify.parse_reward()
-    questions = [ q[-1] for q in verify.parse_questions() ]
+
 # ----------------------- Parse commandline arguments -------------------------
-    # # Define the parser
-    # argparser = ArgumentParser(add_help=False)
-    # # Declare an argument, using a default value if the argument 
-    # # isn't given
-    # argparser.add_argument('-i', '--inputpath', dest='input_dir', default=path.abspath(f"{getcwd()}/static"))
-    # argparser.add_argument('-o', '--outputpath', dest='output_dir', default=path.abspath(f"{getcwd()}/data"))
-    # argparser.add_argument('-st', '--stamppath', dest='stamp_dir', default=path.abspath(f"{getcwd()}/static/cnstformseal.png"))
-    # argparser.add_argument('-ti', '--templatename', dest='template', default='informed_consent_template')
-    # argparser.add_argument('-to', '--documentout', dest='output_name', default='informed_consent_signed')
-    # argparser.add_argument('-pg', '--page', dest='page', default=-1)
-    # argparser.add_argument('-x', '--xcoord', dest='x', default=50)
-    # argparser.add_argument('-y', '--ycoord', dest='y', default=72)
-    # argparser.add_argument('-fs', '--font_size', dest='font_size', default=12)
-    # argparser.add_argument('-fn', '--font_name', dest='font_name', default='helv')
-    # argparser.add_argument('-fc', '--font_color', dest='font_colour', default=(0,0,1))
-    # argparser.add_argument('-fr', '--font_rotate', dest='font_rotate', default=0)
+    # Define the parser
+    argparser = ArgumentParser(add_help=False)
+    # Declare an argument, using a default value if the argument 
+    # isn't given
+    argparser.add_argument('-e', '--encoder', dest='encoder', default='utf-8')
+    argparser.add_argument('-i', '--story_path', dest='story_path', default=path.join(getcwd(), r"stories\task_types") )
+    argparser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true')
 
-    # # Now, parse the command line arguments and store the values in the 'args'
-    # # variable.
-    # args = argparser.parse_args()
-    # # Convert Namespace args to dictionary
-    # # args = vars(args)
-
-# ------------------- Decide what server to run the app in --------------------
-    # print(f"Running {'Waitress' if args.mode=='prod' else 'Flask'} WSGI server.\n")
-    # if args.mode=='prod':
-    #     host_ip = args.host_ip
-    #     host_port = int(args.host_port)
-    #     threads = int(args.threads)
-    #     print(f"Forced 'academic_version' from {app_settings['academic_version']} to 0.")
-    #     app_settings.update( { 'academic_version': 0,
-    #                            'verbose': int(args.verbose)} )
-        
-    #     print("Waitress")
-    #     serve(app, host=host_ip, port=host_port, threads=threads, url_prefix='/humans-app')
-    # elif args.mode=='local':
-    #     host_ip = args.host_ip
-    #     host_port = int(args.host_port)
-    #     app_settings.update( { 'verbose': int(args.verbose) } )
-       
-    #     print("Flask")
-    #     # Runs regular flask server with debug=False
-    #     app.run(host=host_ip, port=host_port)
-    # else:
-    #     host_ip = r"127.0.0.1"
-    #     host_port = int(args.host_port)
-    #     app_settings.update( { 'verbose': int(args.verbose) } )
-
-    #     print("Flask (debug)")
-    #     # Runs local flask server in debug mode
-    #     app.run(host=host_ip, port=host_port, debug=True)
+    # Now, parse the command line arguments and store the values in the 'args'
+    # variable.
+    args = argparser.parse_args()
+    # Convert Namespace args to dictionary
+    # args = vars(args)
     
+    verify = StoryVerify( sto_dir=path.abspath(args.story_path),
+                          encoder=args.encoder,
+                          verbose=args.verbose )
     
     host_ip = r"127.0.0.1"
     host_port = 5000
