@@ -1566,18 +1566,13 @@ def how_feel_pls():
     return render_template('setup_session.html')
 
 # Page for initialising biometrics hardware
-@app.route('/biometrics')
+@app.route('/biometrics', methods=['GET', 'POST'])
 def setup_biometrics():
     """
     Here we simply initialise both the eye tracker and heart rate monitor (if
     they have been activated in bin/setting.ini). Note that the gloab variables
     used here mean that the settings will be applied to every client's
     sessions.
-    Redirects:
-        NOTE: Redirections are handled in the HTML template via hyperlink. See
-        <nav> elements.
-        /story_num_overall, if user clicks 'continue' button.
-        /states, if user clicks 'go back' button.
     """
     global eye_settings
     global eyetracker
@@ -1587,46 +1582,51 @@ def setup_biometrics():
     global hr_monitor
     global HR_TRACKER_STATUS
     
-    # Re-check app settings to see if biometric devices will be used
-    new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
-    new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
-    
-    if new_eye_settings != eye_settings:
-        print("\nEye tracker settings were changed from last session! Reinitialising eye tracker with new settings.")
-        eye_settings.update(new_eye_settings)
-        EYE_TRACKER_STATUS = 0
-        if eye_settings['use_eyetracker']:
-            if not eyetracker is None:
-                eyetracker = None
-            eyetracker = initialise_device('eyetracker')
-    
-    if new_hr_settings != hr_settings:
-        print("\nHeart rate tracker settings were changed from last session! New settings will be used upon initialisation of heart rate monitoring thread.")
-        if not hr_settings['use_external_app']:
-            hr_settings.update(new_hr_settings)
-            HR_TRACKER_STATUS = 0
-            if not hr_monitor is None:
-                if hr_monitor.is_alive():
-                    stop_hr_monitor(hr_monitor)
-                hr_monitor = None
-        else:
-            pass
-            
-    # Open the heart rate monitor program (non-blocking)
-    if hr_settings['use_hrtracker']:
-        if not hr_settings['use_external_app']:
-            if hr_monitor is None:
-                hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])    
-            if not hr_monitor.is_alive():
-                start_hr_monitor(thread=hr_monitor)
-            hr_monitor.set_flag(data_capture=False, flush_data=False)
-        else:
-            hr_monitor = Popen(hr_settings['external_app_install_path'])
-    # Open eye tracker manager (blocking)
-    if EYE_TRACKER_STATUS:
-        print("\nCalling eye tracker manager to initiate calibration!\n")
-        flash("Remember to close the eye tracker software before continuing!", "info")
-        eyetracker.call_eye_tracker_manager()
+    if request.method == 'POST':
+        num_stories = request.form.get('')
+        # Re-check app settings to see if biometric devices will be used
+        new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
+        new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
+        
+        if new_eye_settings != eye_settings:
+            print("\nEye tracker settings were changed from last session! Reinitialising eye tracker with new settings.")
+            eye_settings.update(new_eye_settings)
+            EYE_TRACKER_STATUS = 0
+            if eye_settings['use_eyetracker']:
+                if not eyetracker is None:
+                    eyetracker = None
+                eyetracker = initialise_device('eyetracker')
+        
+        if new_hr_settings != hr_settings:
+            print("\nHeart rate tracker settings were changed from last session! New settings will be used upon initialisation of heart rate monitoring thread.")
+            if not hr_settings['use_external_app']:
+                hr_settings.update(new_hr_settings)
+                HR_TRACKER_STATUS = 0
+                if not hr_monitor is None:
+                    if hr_monitor.is_alive():
+                        stop_hr_monitor(hr_monitor)
+                    hr_monitor = None
+            else:
+                pass
+                
+        # Open the heart rate monitor program (non-blocking)
+        if hr_settings['use_hrtracker']:
+            if not hr_settings['use_external_app']:
+                if hr_monitor is None:
+                    hr_monitor = initialise_device('hrtracker', emulate_hr=bool(hr_settings['emulate_device']), as_daemon=bool(hr_settings['run_thread_as_daemon']), verbose=bool(hr_settings['verbose']), timezone=app_settings['timestamp_timezone'])    
+                if not hr_monitor.is_alive():
+                    start_hr_monitor(thread=hr_monitor)
+                hr_monitor.set_flag(data_capture=False, flush_data=False)
+            else:
+                hr_monitor = Popen(hr_settings['external_app_install_path'])
+        
+        # Open eye tracker manager (blocking)
+        if EYE_TRACKER_STATUS:
+            print("\nCalling eye tracker manager to initiate calibration!\n")
+            flash("Remember to close the eye tracker software before continuing!", "info")
+            eyetracker.call_eye_tracker_manager()
+         
+        return redirect('/story_num_overall')
         
     return render_template('setup_biometrics.html')
 

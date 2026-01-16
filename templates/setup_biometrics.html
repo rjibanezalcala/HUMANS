@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% include 'message.html' %}
+<h3>Biometrics setup</h3>
+{% endblock %}
+
+{% block content %}
+
+<div>
+	<div class="center personal-info">
+		<span class="instructions">
+			<br>
+			<p><b>Read the instructions on this page thoroughly and seek help from a lab technician!</b></p>
+			<p>We will be collecting two types of biometric data today, eye tracking data and heart rate data. Collection of heart rate data during this session is optional, however, collection of eye tracking data is not.
+			You may remove consent to participate in this study altogether at any time. If you do not consent to heart rate data collection, skip over the "Heart rate monitor instructions" section.</p>
+			<p>When you are done reading the instructions on this whole page, click "Continue" at the bottom. Two programs will launch and the app will freeze. You may reference the instructions on this page while it is frozen.</p>
+		</span>
+	</div>
+	<div class="center personal-info">
+		<br>
+		<b>Heart rate monitor (HRM) instructions:</b>
+		<br>
+		<span class="instructions">
+			<p>Please follow instructions below to ensure data is of high quality. Keep in mind that the HRM strap must be worn during the whole session. The HRM is disinfected in-between participants.</p>
+			<p>If you do not consent to the HRM, simply skip to the "Eye tracker instructions" section below.</p>
+			<ol>
+				<li>Don the HRM strap, placing over the bottom of your sternum (about one or two centimeters -or one inch- above the bottom of your ribcage). The recording electrodes on the strap must make
+				direct contact with your skin and the plastic "buckle" should face forward. Tighten the strap if needed.</li>
+				<li>Pulse Monitor will have launched after clicking continue. Bring it into focus.</li>
+				<li>Click on "Start new training". A new window will appear, click "Next".</li>
+				<li>If you are a new participant, pause and seek help from a lab technician. Otherwise, find your ID number in the list. You may use the search function at the top of the list.</li>
+				<li>Under "Select the device", select "Wahoo" from the dropdown.</li>
+				<li>Click "+ Add".</li>
+				<li>Click "> Go to practice". A new window will appear.</li>
+				<li>Click the large, blue play button and wait for your heart beat to be detected. This may take some time.</li>
+				<li>Once detected, click the minimize button to the left of the "Pulse monitor" name and logo.</li>
+				<li>Switch back to your browser window (this app).</li>
+				<li>Scroll down to continue to the next section.</li>
+			</ol>
+		</span>
+	</div>
+	
+	<br>
+	
+	<div class="center personal-info">
+		<br>
+		<b>Eye tracker instructions:</b>
+		<br>
+		<span class="instructions">
+			<p>During your session, we will collect information about where you are looking on the screen using the eye tracking device located at the bottom of the monitor. The eye tracker will periodically turn on and off; when on,
+			dim red lights will be visible on the device.</p>
+			<p>To ensure that data is of high quality, please do not block the eye tracker's sensors and try to stay within view of the device when it is on.</p>
+			<p>If you need corrective lenses (glasses or contact lenses) to read the screen, please put them on now and do not remove them during the entirety of your session, squinting can affect the quality of the data.</p>
+			<ol>
+				<li>Upon clicking continue, the Eye Tracker Manager program will launch.</li>
+				<li>Wait for the eye tracker to be detected. Then, click "Tobii Pro Spark" on the top left of the screen.</li>
+				<li>Toggle "Gaze visualization" on; a pink bubble will appear on screen. This is where the eye tracker thinks you are looking. It is likely that the placement will not be accurate.</li>
+				<li>Click the "Calibrate" button and follow the on-screen instructions.</li>
+				<li>When done, verify the gaze visualization placement on the screen. If it seems accurate enough, click "Use calibration".</li>
+				<li>Close the Eye Tracker Manager. This will bring you to the next screen.</li>
+			</ol>
+		</span>
+	</div>
+	
+	<br>
+	
+	<div class="center">
+		<form method="POST">
+			<input type="submit" class="btn btn-primary" value="Continue"/>
+		</form>
+	</div>
+</div>
+
+{% endblock %}
+
