@@ -1,1 +1,1 @@
-python -m verify_stories -e cp1252 -v
+python -m verify_stories -e cp1252 -v -err replace

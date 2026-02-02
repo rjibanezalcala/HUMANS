@@ -33,6 +33,7 @@ class StoryVerify:
         self.story_queue = None
         # Character encoder to use when opening files
         self.encoder   = kwargs.get('encoder', 'utf-8')
+        self.encoderErrorHandle = kwargs.get('encoder_error', 'ignore')
         # General settings
         self.verbose = bool( kwargs.get('verbose', 0) )
     
@@ -54,7 +55,7 @@ class StoryVerify:
         for file in files:
             if self.verbose: print(f"\nFile: {file}")
             try:
-                with open(file, 'r', encoding=self.encoder) as f:
+                with open(file, 'r', encoding=self.encoder, errors=self.encoderErrorHandle) as f:
                     txt = f.read()
                     self.container[path.basename(file).split(r'.')[0]] = txt
             except Exception as e:
@@ -349,6 +350,8 @@ if __name__ == '__main__':
     argparser.add_argument('-e', '--encoder', dest='encoder', default='utf-8')
     argparser.add_argument('-i', '--story_path', dest='story_path', default=path.join(getcwd(), r"stories\task_types") )
     argparser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true')
+    argparser.add_argument('-err', '--enc_err', dest='encoder_error', default='ignore')
+
 
     # Now, parse the command line arguments and store the values in the 'args'
     # variable.
@@ -356,9 +359,7 @@ if __name__ == '__main__':
     # Convert Namespace args to dictionary
     # args = vars(args)
     
-    verify = StoryVerify( sto_dir=path.abspath(args.story_path),
-                          encoder=args.encoder,
-                          verbose=args.verbose )
+    verify = StoryVerify( **vars(args) )
     
     host_ip = r"127.0.0.1"
     host_port = 5000

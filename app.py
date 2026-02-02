@@ -339,7 +339,7 @@ def replace_demdata(user, target_entries, make_backup=True):
                 else:
                     data[i] = f"{ key }: { str(value) }"
     # Replace everything in the original file with the new information.
-    with open(data_dir+"/demographic_info.txt", 'w') as f:
+    with open(data_dir+"/demographic_info.txt", 'w', errors=app_settings.get('encoder_error', 'ignore')) as f:
         f.writelines(data)
     
     return data_dir+"/demographic_info.txt"
@@ -560,7 +560,7 @@ def choose_questions(sesh):
     
     print(f"\nChoosing questions for current story: { story_num_overall }.")    # Should help with debugging
     path = os.path.abspath(f"stories/task_types{story_num_overall}/questions.txt")
-    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8'), errors=app_settings.get('encoder_error', 'ignore')).read()
     lines = txt.split("\n")
     lines = [line.strip() for line in lines if (line != '' and line != ' ')]
     quest_dict = {}
@@ -1583,7 +1583,6 @@ def setup_biometrics():
     global HR_TRACKER_STATUS
     
     if request.method == 'POST':
-        num_stories = request.form.get('')
         # Re-check app settings to see if biometric devices will be used
         new_eye_settings = without_keys( parse_ini(section='eye_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
         new_hr_settings = without_keys( parse_ini(section='hr_tracker', eval_datatype=True), {} ) # Parse app settings from ini.
@@ -1779,7 +1778,7 @@ def context():
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     # path = f"stories/story_{story_num_overall}/context.txt"
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8'), errors=app_settings.get('encoder_error', 'ignore')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, relationship_level = replace_all(txt, app_settings['relation_levels'])
@@ -1802,7 +1801,7 @@ def rank_prefs(cost_or_reward):
     
     # Determine story identifiers and open the correct preferences file.
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
-    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read()
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8'), errors=app_settings.get('encoder_error', 'ignore')).read()
     
     # Parse the preference options in the file
     options = txt.split("\n")
@@ -1853,7 +1852,7 @@ def context_refresh():
     
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/context.txt"
-    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8'), errors=app_settings.get('encoder_error', 'ignore')).read().replace("’", "'")
     if task_type == 'social':
         if app_settings['randomise_relation_levels'] and story_num in app_settings['relation_level_stories']:
             txt, _ = replace_all(txt, app_settings['relation_levels'], replace_with=relationship_level)
@@ -1880,7 +1879,7 @@ def rank_prefs_again(cost_or_reward):
     print(f"\nCurrent story number: { str(current_story_indx+1) }.\nStory: { story_num_overall }.\n")    # Should help with debugging
     path = f"stories/task_types{story_num_overall}/pref_{cost_or_reward}.txt"
     task_type = story_num_overall.split('/')[1]
-    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8')).read().replace("’", "'")
+    txt = open(path, encoding=app_settings.get('txt_encoding', 'utf-8'), errors=app_settings.get('encoder_error', 'ignore')).read().replace("’", "'")
 
     options = txt.split("\n")
     opt_dict = {}
