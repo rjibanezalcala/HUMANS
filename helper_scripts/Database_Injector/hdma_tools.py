@@ -7,11 +7,19 @@ HUMANS_tools.py v0.0.1
 """
 
 import pandas as pd
-from os import listdir, path
+from os import listdir, path, environ
 from ast import literal_eval
 from copy import deepcopy
 import psycopg2 as sql
 from configparser import ConfigParser as cfgp
+from configparser import ExtendedInterpolation
+
+def isfloat(num):
+    try:
+        float(num)
+        return True
+    except ValueError:
+        return False
 
 class ParserTools:
     def __init__(self, **kwargs):
@@ -36,11 +44,13 @@ class ParserTools:
     
         if eval_datatype:
             for key, value in db.items():
-                if value.isnumeric():
+                if value.startswith('$'):
+                    db[key] = environ.get(value.split('$')[-1])
+                elif value.isnumeric() or isfloat(value) or value.startswith("["):
                     db[key] = literal_eval(value)
-                elif value.startswith('['):
-                    db[key] = literal_eval(value)
-                
+                else:
+                    db[key] = value
+       
         return db
     
     def without_keys(self, d, keys):
@@ -158,7 +168,7 @@ class DatabaseTools:
             
         return resp[0]
     
-    def get_user_records(self, id_num, credentials, data_table, select=['*'], equals={}, like={}):
+    def get_user_records(self, id_num, credentials, data_table, select=['*'], equals={}, like={}, matches={}):
         print(f"[DatabaseTools] Fetching records for user {id_num}...")
         if self.exists(data_table, credentials):
             query = "SELECT "
@@ -171,12 +181,18 @@ class DatabaseTools:
             
             query += f"FROM { data_table } "+\
                      f"WHERE subjectidnumber='{ str(id_num) }'"
-        
-            for key, value in equals.items():
-                query += f" AND { str(key) }='{ str(value) }'"
             
-            for key, value in like.items():
-                query += f" AND { str(key) } LIKE '{ str(value)+'%' }'"
+            if not equals == {}:
+                for key, value in equals.items():
+                    query += f" AND { str(key) }='{ str(value) }'"
+            
+            if not matches == {}:
+                for key, value in matches.items():
+                    query += f" AND { str(key) }~'{ str(value) }'"
+            
+            if not like == {}:
+                for key, value in like.items():
+                    query += f" AND { str(key) } LIKE '{ str(value)+'%' }'"
             
             query += ";"
             
