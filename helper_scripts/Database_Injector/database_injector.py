@@ -204,12 +204,16 @@ if __name__ == "__main__":
     # Declare an argument, using a default value if the argument 
     # isn't given
     argparser.add_argument('-s', '--supervised', action="store_true", dest='supervised', help="whether to wait for user input upon processing each file (default: %(default)s)", default=False)
-    argparser.add_argument('-dnu', '--donotupload', action="store_true", dest='donotupload', help="if true, data is not uploaded to database (default: %(default)s)", default=False)
+    argparser.add_argument('-dnu', '--donotupload', action="store_true", dest='donotupload', help="if true, data is not uploaded to database (default: %(default)s)", default=True)
     argparser.add_argument('-d', '--datafolder', dest='data_dir', help='Location of data in disk (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../data")) )
     argparser.add_argument('-i', '--ini', dest="set_dir", help='Location of app settings file (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../bin/settings.ini")) )
     argparser.add_argument('-g', '--group_by', dest='group_by', help='Indicates timestamps should be grouped, whether by trial, story, or session (default: %(default)s)', default='trial')
+    argparser.add_argument('-u', '--upper_bound', dest='upper_bound', help="Selects the 0th time stamp to use for the time bounds' upper bound. Selecting 'start' will use the 0th trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: %(default)s)", default='trial_start')
+    argparser.add_argument('-l', '--lower_bound', dest='lower_bound', help="Selects the nth time stamp to use for the time bounds' lower bound. Selecting 'start' will use the nth trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: %(default)s)", default='trial_end')
+    argparser.add_argument('-uo', '--upper_offset', dest='upper_offset', help="Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
+    argparser.add_argument('-lo', '--lower_offset', dest='lower_offset', help="Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
     argparser.add_argument('-cwd', '--usecurrentdir', action="store_true", dest="usecwd", help='Use the current working directory as --datafolder (default: %(default)s)', default=False)
-    argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=False, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
+    argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=True, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
     # Now, parse the command line arguments and store the 
     # values in the 'args' variable
     args = argparser.parse_args()
@@ -305,8 +309,10 @@ if __name__ == "__main__":
                                     story_range = (current_story[1], record_num)
                                     current_story = (record['tasktypedone'], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1] ]
-                                    time_bounds.append( (story_bounds[0]['trial_start'].replace(microsecond=0)-timedelta(0,1),
-                                                         story_bounds[-1][ 'trial_end'].replace(microsecond=0)+timedelta(0,1)) )
+                                    upper_bound = story_bounds[0][args.upper_bound]
+                                    lower_bound = story_bounds[-1][args.lower_bound]
+                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                     for_upload.append( {'records'    : story_bounds,
                                                         'time_bounds': time_bounds[-1],
                                                         'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
@@ -317,8 +323,10 @@ if __name__ == "__main__":
                                     print(f"\n  Time bounds for story {current_story[0]}: ", end="")
                                     story_range = (current_story[1], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1]+1 ]
-                                    time_bounds.append( (story_bounds[0]['trial_start'].replace(microsecond=0)-timedelta(0,1),
-                                                         story_bounds[-1][ 'trial_end'].replace(microsecond=0)+timedelta(0,1)) )
+                                    upper_bound = story_bounds[0][args.upper_bound]
+                                    lower_bound = story_bounds[-1][args.lower_bound]
+                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                     for_upload.append( {'records'    : story_bounds,
                                                         'time_bounds': time_bounds[-1],
                                                         'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
@@ -332,8 +340,10 @@ if __name__ == "__main__":
                         elif args.group_by == "session":
                             # Take the first trial_start and last trial_end of
                             # the fetched records.
-                            time_bounds.append( (user_data[0]['trial_start'].replace(microsecond=0)-timedelta(0,1),
-                                                 user_data[-1][ 'trial_end'].replace(microsecond=0)+timedelta(0,1)) )
+                            upper_bound = user_data[0][args.upper_bound]
+                            lower_bound = user_data[-1][args.lower_bound]
+                            time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                 lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                             for_upload.append( {'records'    : user_data,
                                                 'time_bounds': time_bounds[-1],
                                                 'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
@@ -344,8 +354,10 @@ if __name__ == "__main__":
                         elif args.group_by == "trial":
                             # Get the trial_start and trial_end of each record.
                             for record in user_data:
-                                time_bounds.append( (record['trial_start'].replace(microsecond=0)-timedelta(0,1),
-                                                     record[ 'trial_end' ].replace(microsecond=0)+timedelta(0,1)) )
+                                upper_bound = record[args.upper_bound]
+                                lower_bound = record[args.lower_bound]
+                                time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                     lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                 for_upload.append( {'records'    : [record],
                                                     'time_bounds': time_bounds[-1],
                                                     'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
