@@ -2,7 +2,7 @@
 """
 Created on Tue Nov 21 12:50:26 2023
 
-database_injector.py v0.1.1
+database_injector.py v0.1.2
 @author: Raquel Ibáñez Alcalá
 """
 # %% Imports
