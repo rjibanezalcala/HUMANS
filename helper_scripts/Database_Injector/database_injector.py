@@ -204,7 +204,7 @@ if __name__ == "__main__":
     # Declare an argument, using a default value if the argument 
     # isn't given
     argparser.add_argument('-s', '--supervised', action="store_true", dest='supervised', help="whether to wait for user input upon processing each file (default: %(default)s)", default=False)
-    argparser.add_argument('-dnu', '--donotupload', action="store_true", dest='donotupload', help="if true, data is not uploaded to database (default: %(default)s)", default=True)
+    argparser.add_argument('-dnu', '--donotupload', action="store_true", dest='donotupload', help="if true, data is not uploaded to database (default: %(default)s)", default=False)
     argparser.add_argument('-d', '--datafolder', dest='data_dir', help='Location of data in disk (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../data")) )
     argparser.add_argument('-i', '--ini', dest="set_dir", help='Location of app settings file (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../bin/settings.ini")) )
     argparser.add_argument('-g', '--group_by', dest='group_by', help='Indicates timestamps should be grouped, whether by trial, story, or session (default: %(default)s)', default='trial')
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     argparser.add_argument('-uo', '--upper_offset', dest='upper_offset', help="Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
     argparser.add_argument('-lo', '--lower_offset', dest='lower_offset', help="Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
     argparser.add_argument('-cwd', '--usecurrentdir', action="store_true", dest="usecwd", help='Use the current working directory as --datafolder (default: %(default)s)', default=False)
-    argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=True, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
+    argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=False, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
     # Now, parse the command line arguments and store the 
     # values in the 'args' variable
     args = argparser.parse_args()
