@@ -208,9 +208,9 @@ if __name__ == "__main__":
     argparser.add_argument('-d', '--datafolder', dest='data_dir', help='Location of data in disk (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../data")) )
     argparser.add_argument('-i', '--ini', dest="set_dir", help='Location of app settings file (default: %(default)s)', default=path.abspath(path.join(getcwd(),r"../../bin/settings.ini")) )
     argparser.add_argument('-g', '--group_by', dest='group_by', help='Indicates timestamps should be grouped, whether by trial, story, or session (default: %(default)s)', default='trial')
-    argparser.add_argument('-u', '--upper_bound', dest='upper_bound', help="Selects the 0th time stamp to use for the time bounds' upper bound. Selecting 'start' will use the 0th trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: %(default)s)", default='trial_start')
+    argparser.add_argument('-u', '--upper_bound', dest='upper_bound', help="Selects the 0th time stamp to use for the time bounds' upper bound. Selecting 'start' will use the 0th trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: %(default)s)", default='trial_end')
     argparser.add_argument('-l', '--lower_bound', dest='lower_bound', help="Selects the nth time stamp to use for the time bounds' lower bound. Selecting 'start' will use the nth trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: %(default)s)", default='trial_end')
-    argparser.add_argument('-uo', '--upper_offset', dest='upper_offset', help="Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
+    argparser.add_argument('-uo', '--upper_offset', dest='upper_offset', help="Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=5)
     argparser.add_argument('-lo', '--lower_offset', dest='lower_offset', help="Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
     argparser.add_argument('-cwd', '--usecurrentdir', action="store_true", dest="usecwd", help='Use the current working directory as --datafolder (default: %(default)s)', default=False)
     argparser.add_argument('-dnm', '--donotmoveprocessedfiles', action='store_true', dest='donotmove', default=False, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
@@ -267,14 +267,14 @@ if __name__ == "__main__":
                                            'next_story_index': int(record['next_story_index'])})
                             # Parse timestamps so they can be used to filter
                             # the HRM data.
-                            new_record = inj.parse_time_strings(record, inplace=False)[1]
-                            user_data[record_num] = new_record
+                            # new_record = inj.parse_time_strings(record, inplace=False)[1]
+                            # user_data[record_num] = new_record
                         # Finally, sort the fetched records.    
                         user_data = sorted(user_data, key=lambda d: (d['next_story_index'], 
                                                                      d['tasktypedone'],
                                                                      d['trial_index'])
                                            )
-                        print(f" Total elapsed time of fetched records is {int((user_data[-1]['trial_end'] - user_data[0]['trial_start']).total_seconds() // 60)} minutes.")
+                        # print(f" Total elapsed time of fetched records is {int((user_data[-1]['trial_end'] - user_data[0]['trial_start']).total_seconds() // 60)} minutes.")
                         
                         # Create time bounds to filter the HRM data with.
                         # This can be done in one of three ways, depending on
@@ -309,8 +309,10 @@ if __name__ == "__main__":
                                     story_range = (current_story[1], record_num)
                                     current_story = (record['tasktypedone'], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1] ]
-                                    upper_bound = story_bounds[0][args.upper_bound]
-                                    lower_bound = story_bounds[-1][args.lower_bound]
+                                    # upper_bound = story_bounds[0][args.upper_bound]
+                                    # lower_bound = story_bounds[-1][args.lower_bound]
+                                    upper_bound = inj.parse_time_strings(story_bounds[0], inplace=False)[1][args.upper_bound]
+                                    lower_bound = inj.parse_time_strings(story_bounds[-1], inplace=False)[1][args.lower_bound]
                                     time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
                                                          lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                     for_upload.append( {'records'    : story_bounds,
@@ -321,10 +323,11 @@ if __name__ == "__main__":
                                     print(f"{for_upload[-1]['time_bounds'][0].strftime(inj.db_ts_format)} - {for_upload[-1]['time_bounds'][1].strftime(inj.db_ts_format)} ({for_upload[-1]['time_delta']} seconds) corresponding to records {story_range[0]} through {story_range[1]}.")
                                 elif record_num == len(user_data)-1:
                                     print(f"\n  Time bounds for story {current_story[0]}: ", end="")
+                                    record = inj.parse_time_strings(record, inplace=False)[1]
                                     story_range = (current_story[1], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1]+1 ]
-                                    upper_bound = story_bounds[0][args.upper_bound]
-                                    lower_bound = story_bounds[-1][args.lower_bound]
+                                    upper_bound = inj.parse_time_strings(story_bounds[0], inplace=False)[1][args.upper_bound]
+                                    lower_bound = inj.parse_time_strings(story_bounds[-1], inplace=False)[1][args.lower_bound]
                                     time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
                                                          lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                     for_upload.append( {'records'    : story_bounds,
@@ -340,8 +343,10 @@ if __name__ == "__main__":
                         elif args.group_by == "session":
                             # Take the first trial_start and last trial_end of
                             # the fetched records.
-                            upper_bound = user_data[0][args.upper_bound]
-                            lower_bound = user_data[-1][args.lower_bound]
+                            # upper_bound = user_data[0][args.upper_bound]
+                            # lower_bound = user_data[-1][args.lower_bound]
+                            upper_bound = inj.parse_time_strings(user_data[0], inplace=False)[1][args.upper_bound]
+                            lower_bound = inj.parse_time_strings(user_data[-1], inplace=False)[1][args.lower_bound]
                             time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
                                                  lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                             for_upload.append( {'records'    : user_data,
@@ -354,8 +359,10 @@ if __name__ == "__main__":
                         elif args.group_by == "trial":
                             # Get the trial_start and trial_end of each record.
                             for record in user_data:
-                                upper_bound = record[args.upper_bound]
-                                lower_bound = record[args.lower_bound]
+                                # upper_bound = record[args.upper_bound]
+                                # lower_bound = record[args.lower_bound]
+                                upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
+                                lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
                                 time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
                                                      lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                 for_upload.append( {'records'    : [record],
@@ -422,7 +429,7 @@ if __name__ == "__main__":
                                 print(f"\n  >>> Updated {up_rows} row(s) <<<") if up_rows >= 1 and not up_rows is None else print("\n   Could not update database records.")
                         else:
                             print("\n   >>> Data was not uploaded to database <<<")
-
+                        break
                         if not args.donotmove:    
                             print(f"\n  Moving {file}\n  from '{ root_dir }\\{ user_id }'\n  to '{processed_dir}'")
                             move(f"{ root_dir }\\{ user_id }\\{ file }", f"{processed_dir}\\{ file }")
