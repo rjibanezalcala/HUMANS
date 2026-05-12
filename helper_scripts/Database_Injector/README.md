@@ -12,15 +12,15 @@
 
 **What this script is**
 
-> This script will walk through the HUMANS app 'data' directory and will upload the
+This script will walk through the HUMANS app 'data' directory and will upload the
 CSV data for each heart rate dump file into the 'heart_rate_data' column in a 
 PostgreSQL database.
-> 
-> Records of the user must exist in the database prior to injecting data.
+
+Records of the user must exist in the database prior to injecting data.
 
 **What this script is not**
 
-> This script does not inject demographic data or decision-making data to the
+This script does not inject demographic data or decision-making data to the
 database. It will not create a data table nor a data column. The script assumes
 that a database and table have been set up prior.
 
@@ -130,10 +130,13 @@ from the containing directory.
 |  -cwd | --use_current_dir | Use the current working directory as --datafolder (default: False) |
 |-dnm | --do_not_move | prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: False)|
 |-g GROUP_METHOD| --group_by GROUP_METHOD| Preferred method to segment the HR data. Segmenting by 'trial' gives the most granularity, but HR records will be small; this takes the trial_start and trial_end timestamps of each record and uses them as the time bounds. Grouping by 'story' will take the trial_start timestamp of the story's first trial, and the trial_end of the last. Grouping by session will take the day's first trial_start time, and the last trial_end (default: trial) |
-|-u TIMESTAMP_NAME|--upper_bound TIMESTAMP_NAME|Selects the 0th time stamp to use for the time bounds' upper bound. Selecting 'start' will use the 0th trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: trial_start)|
-|-l TIMESTAMP_NAME|--lower_bound TIMESTAMP_NAME|Selects the nth time stamp to use for the time bounds' lower bound. Selecting 'start' will use the nth trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: trial_end)|
+|-u TIMESTAMP_NAME|--upper_bound TIMESTAMP_NAME|Selects the first time stamp to use for the time bounds' upper bound. Selecting 'start' will use the n<sup>th</sup> trial's 'trial_start' time stamp, and 'end' will use 'trial_end'. (default: trial_start)|
+|-l TIMESTAMP_NAME|--lower_bound TIMESTAMP_NAME|Selects the n<sup>th</sup> time stamp to use for the time bounds' lower bound. Selecting 'start' will use the n<sup>th</sup> trial's 'trial_start' time stamp, and 'end' will use the n+1<sup>th</sup> 'trial_end' timestamp. (default: trial_end)|
 |-uo SECONDS|--upper_offset SECONDS|Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: 1)|
 |-lo SECONDS|--lower_offset SECONDS|Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: 1)|
+
+> [!NOTE]
+> If -u and -l are the same, the injector will generate the time bounds using the indicated upper bound (set by -u) from trial n, and the indicated lower bound (set by -l) from trial n+1. Otherwise, both upper and lower time bounds are taken from trial n.
 
 ---
 
