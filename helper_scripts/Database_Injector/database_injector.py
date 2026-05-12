@@ -358,11 +358,18 @@ if __name__ == "__main__":
                         
                         elif args.group_by == "trial":
                             # Get the trial_start and trial_end of each record.
-                            for record in user_data:
+                            for i, record in enumerate(user_data):
                                 # upper_bound = record[args.upper_bound]
                                 # lower_bound = record[args.lower_bound]
-                                upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
-                                lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
+                                if args.upper_bound == args.lower_bound:
+                                    try:
+                                        upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
+                                        lower_bound = inj.parse_time_strings(user_data[i+1], inplace=False)[1][args.lower_bound]
+                                    except:
+                                        lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
+                                else:
+                                    upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
+                                    lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
                                 time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
                                                      lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
                                 for_upload.append( {'records'    : [record],
