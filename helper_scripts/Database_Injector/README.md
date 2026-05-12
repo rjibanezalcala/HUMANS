@@ -218,3 +218,21 @@ In the second case, you may see the message "Could not update database records".
 ## I keep seeing the message ">> Data was not uploaded to database <<<"
 
 Make sure you are not setting the ``-dnu`` or ``--do_not_upload`` comand line parameter when running the injector!
+
+## The injector crashed because it can't parse the timestamps fetched from the database
+
+This one should not appear unless you have changed the way timestamps get saved in the database.
+
+The injector expects timestamps that it can match with the regular expression ``^[A-Za-z]{3}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+\d{4}\s+[A-Z]{3,4}``. This typically can look like this:
+
+``Tue May 12 18:51:20.914628 2026 UTC``
+
+or like this:
+
+``Tue May 12 18:51:20.914628 2026 UTC;/trial_end``
+
+If timestamps are not saved as such in the database, the injector will fail to find the timestamp in the fetched records.
+
+To resolve this, make sure that the app is parsing timestamps in this way. This is done through the ``datetime.strftime()`` method in the app, every time a timestamp is taken.
+
+To modify how timestamps are parsed in the injector, first refer to the injector's source code and look for the parameter ``self.db_ts_format`` within the ``__init__()`` function of the injector class; this by default is set to ``%a %b %d %H:%M:%S.%f %Y``. You may modify this, but you must also make sure that timestamps are parsed the same way in the app. Then, find the parameter ``self.ts_pattern`` and modify it so that ``re.match()`` is able to find the timestamp in the fetched string.

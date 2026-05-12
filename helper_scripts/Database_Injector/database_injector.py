@@ -32,6 +32,9 @@ class Injector:
         self.db_ts_format = r"%a %b %d %H:%M:%S.%f %Y"   # Database timestamp format
         self.pb_ts_format = r"^%a %b %d .* %Y"           # Partial database timestamp format for 'LIKE' matching
         self.tz           = None                         # Timezone to which database timestamps are localised
+        self.ts_pattern   = r'^[A-Za-z]{3}\s+[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+\d{4}\s+[A-Z]{3,4}'
+        # Regular expression to match the timestamp defined in self.db_ts_format; this is necessary to separate
+        # the timestamped URL from the actual timestamp
         
         self.pt = ParserTools(settings_path=self.settings_path)
         self.dt = DatabaseTools()
@@ -76,7 +79,7 @@ class Injector:
                         result.append(key)
         return result
     
-    def parse_time_strings(self, record, inplace=False, localize=False):
+    def parse_time_strings(self, record, inplace=False, localize=False, use_regex=True):
         if inplace:
             # Parse date strings to datetime and save directy into the input
             data = record
@@ -88,6 +91,11 @@ class Injector:
         
         if isinstance(data, dict):
             for key, value in data.items():
+                if use_regex:
+                    try:
+                        value = re.match(self.ts_pattern, value)[0]
+                    except:
+                        pass
                 if localize:
                     # Grab timezone from timestamp
                     tz_string = re.search(' [A-Z]{3}$', value)
@@ -217,6 +225,15 @@ if __name__ == "__main__":
     # Now, parse the command line arguments and store the 
     # values in the 'args' variable
     args = argparser.parse_args()
+    
+    # These are for testing pls ignore thnx
+    # args.donotupload = False
+    # args.group_by = 'trial'
+    # args.upper_bound = 'trial_end'
+    # args.lower_bound = 'trial_end'
+    # args.upper_offset = 0
+    # args.lower_offset = 0
+    # args.donotmove = True
 
 #%% ------------------------------ Setup ----------------------------------------
     
@@ -392,7 +409,7 @@ if __name__ == "__main__":
                             # Convert all hr dataset timestamps to database format
                             for x in filtered_hr:
                                 # Convert to datetime
-                                inj.parse_time_strings(x, inplace=True)
+                                inj.parse_time_strings(x, inplace=True, use_regex=False)
                                 # Then convert to database timestamp string
                                 inj.parse_time_stamps(x, inj.db_ts_format,
                                                       inplace=True,
