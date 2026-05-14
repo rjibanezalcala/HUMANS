@@ -8,6 +8,8 @@ database_injector.py v0.1.2
 # %% Imports
 from datetime import datetime, date, timedelta
 from pytz import timezone
+from zoneinfo import ZoneInfo
+from tzlocal import get_localzone
 from os import path, getcwd, mkdir
 from shutil import move
 from copy import deepcopy
@@ -86,7 +88,8 @@ class Injector:
         else:
             data = deepcopy(record)
             
-        fmts = (self.ds_ts_format, self.fn_ts_format, self.db_ts_format if localize else self.db_ts_format+r' %Z')
+        # fmts = (self.ds_ts_format, self.fn_ts_format, self.db_ts_format if localize else self.db_ts_format+r' %Z')
+        fmts = (self.ds_ts_format, self.fn_ts_format, self.db_ts_format)
         parsed = []
         
         if isinstance(data, dict):
@@ -96,21 +99,30 @@ class Injector:
                         value = re.match(self.ts_pattern, value)[0]
                     except:
                         pass
-                if localize:
-                    # Grab timezone from timestamp
-                    tz_string = re.search(' [A-Z]{3}$', value)
-                    tz = timezone(tz_string.group(0).strip()) if not tz_string is None else self.tz
                 for fmt in fmts:
                     try:
-                        ts = tz.localize(datetime.strptime(value.replace(tz_string.group(0), ''), fmt)) if localize\
-                            else datetime.strptime(value, fmt)
-                    except ValueError:
-                        pass
-                    except Exception:
+                        # Grab timezone from timestamp
+                        # print(f"\n\n{value}\n\n")
+                        tz_string = re.search(' [A-Z]{3}$', value)
+                        value = value.replace(tz_string[0], '') if not tz_string is None else value
+                        if localize:
+                            # Working with timezones here is a bit of a challenge,
+                            # round trip conversions from string to datetime using the
+                            # same format can be unreliable because of the timezone.
+                            # For this reason, we will completely get rid of the
+                            # timezone information from the timestamp and localize it
+                            # after the fact.
+                            tz = timezone(tz_string[0].strip()) if not tz_string is None else self.tz
+                            ts = tz.localize(datetime.strptime(value, fmt))
+                        else:
+                            ts = datetime.strptime(value, fmt)
+                    except Exception as e:
+                        # print(e)
                         pass
                     else:
+                        #print(f"\nAAA:{ts}\n")
                         parsed.append((key, value, ts, fmt))
-                        data[key] = ts          
+                        data[key] = ts
         
             return parsed if len(parsed) > 0 else None, data
         
@@ -159,6 +171,10 @@ class Injector:
             filtered = data.loc[mask]
             
             return filtered
+    
+    def apply_timezone_offset(self, timestamp, zone):
+        zone = timezone(zone)
+        return datetime.astimezone(zone)
 
 # class MyParser(ArgumentParser):
 # # Overwrites argparser error behaviour.
@@ -222,18 +238,22 @@ if __name__ == "__main__":
     argparser.add_argument('-lo', '--lower_offset', dest='lower_offset', help="Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: %(default)s)", type=int, default=1)
     argparser.add_argument('-cwd', '--use_current_dir', action="store_true", dest="usecwd", help='Use the current working directory as --datafolder (default: %(default)s)', default=False)
     argparser.add_argument('-dnm', '--do_not_move', action='store_true', dest='donotmove', default=False, help='prevents the program from moving already processed files to the _PROCESSED_FILES directory, also program will also not create the directory (default: %(default)s)')
+    argparser.add_argument('-loc', '--localize_timestamps', action="store_true", dest='localize_ts', help="Indicates whether to parse timestamps so in a way that makes them timezone-aware. This is useful if there is a timezone mismatch timestamps in the database and in the dataset to be segmented. (default: %(default)s)", default=False)
+    argparser.add_argument('-ltz', '--local_timezone', dest='local_tz', help="The timezone to use to localize timestamps in the dataset to be segmented. The timezone used to generate timestamps from the app is taken for bin/settings.ini. Must be identifiable from the IANA Time Zone Database, but can be either the full 'TZ Identifier' or the abbreviation. (default: %(default)s)", default=str(get_localzone()))
+
     # Now, parse the command line arguments and store the 
     # values in the 'args' variable
     args = argparser.parse_args()
     
     # These are for testing pls ignore thnx
-    # args.donotupload = False
+    # args.donotupload = True
     # args.group_by = 'trial'
     # args.upper_bound = 'trial_end'
     # args.lower_bound = 'trial_end'
     # args.upper_offset = 0
     # args.lower_offset = 0
     # args.donotmove = True
+    # args.localize_ts = True
 
 #%% ------------------------------ Setup ----------------------------------------
     
@@ -278,6 +298,16 @@ if __name__ == "__main__":
                     if not user_data is None:
                         print(f"\n[Injector] Retrieved {len(user_data)} records where date matches pattern '{date_pattern}'.", end="")
                         # Parse fetched user records and sort fetched user records
+                        trials = []
+                        for record in user_data:
+                            # Check if record is a trial
+                            url = re.search(r'(?<=;).*', record['trial_start'])
+                            if not url is None:
+                                if url.group(0).startswith('/trial/'):
+                                    trials.append(record)
+                        else:
+                            trials.append(record)
+                        user_data = trials
                         for record_num, record in enumerate(user_data):
                             # Parse trial index and next story index as int
                             record.update({'trial_index': int(record['trial_index']),
@@ -326,35 +356,28 @@ if __name__ == "__main__":
                                     story_range = (current_story[1], record_num)
                                     current_story = (record['tasktypedone'], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1] ]
-                                    # upper_bound = story_bounds[0][args.upper_bound]
-                                    # lower_bound = story_bounds[-1][args.lower_bound]
-                                    upper_bound = inj.parse_time_strings(story_bounds[0], inplace=False)[1][args.upper_bound]
-                                    lower_bound = inj.parse_time_strings(story_bounds[-1], inplace=False)[1][args.lower_bound]
-                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
-                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
-                                    for_upload.append( {'records'    : story_bounds,
-                                                        'time_bounds': time_bounds[-1],
-                                                        'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
-                                                        'hr_data'    : []
-                                                        } )
-                                    print(f"{for_upload[-1]['time_bounds'][0].strftime(inj.db_ts_format)} - {for_upload[-1]['time_bounds'][1].strftime(inj.db_ts_format)} ({for_upload[-1]['time_delta']} seconds) corresponding to records {story_range[0]} through {story_range[1]}.")
                                 elif record_num == len(user_data)-1:
                                     print(f"\n  Time bounds for story {current_story[0]}: ", end="")
                                     record = inj.parse_time_strings(record, inplace=False)[1]
                                     story_range = (current_story[1], record_num)
                                     story_bounds  = user_data[ story_range[0] : story_range[-1]+1 ]
-                                    upper_bound = inj.parse_time_strings(story_bounds[0], inplace=False)[1][args.upper_bound]
-                                    lower_bound = inj.parse_time_strings(story_bounds[-1], inplace=False)[1][args.lower_bound]
-                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
-                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
-                                    for_upload.append( {'records'    : story_bounds,
-                                                        'time_bounds': time_bounds[-1],
-                                                        'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
-                                                        'hr_data'    : []
-                                                        } )
-                                    print(f"{for_upload[-1]['time_bounds'][0].strftime(inj.db_ts_format)} - {for_upload[-1]['time_bounds'][1].strftime(inj.db_ts_format)} ({for_upload[-1]['time_delta']} seconds) corresponding to records {story_range[0]} through {story_range[1]}.")
                                 else:
                                     continue
+                                
+                                upper_bound = inj.parse_time_strings(story_bounds[0], inplace=False)[1][args.upper_bound]
+                                lower_bound = inj.parse_time_strings(story_bounds[-1], inplace=False)[1][args.lower_bound]
+                                if not args.localize_ts:
+                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
+                                else:
+                                    time_bounds.append( (upper_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)+timedelta(0,args.lower_offset)) )
+                                for_upload.append( {'records'    : story_bounds,
+                                                    'time_bounds': time_bounds[-1],
+                                                    'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
+                                                    'hr_data'    : []
+                                                    } )
+                                print(f"{for_upload[-1]['time_bounds'][0].strftime(inj.db_ts_format)} - {for_upload[-1]['time_bounds'][1].strftime(inj.db_ts_format)} ({for_upload[-1]['time_delta']} seconds) corresponding to records {story_range[0]} through {story_range[1]}.")
                             print(f"\n[Injector] Detected {len(time_bounds)} stories in fetched records.")
                                 
                         elif args.group_by == "session":
@@ -364,8 +387,12 @@ if __name__ == "__main__":
                             # lower_bound = user_data[-1][args.lower_bound]
                             upper_bound = inj.parse_time_strings(user_data[0], inplace=False)[1][args.upper_bound]
                             lower_bound = inj.parse_time_strings(user_data[-1], inplace=False)[1][args.lower_bound]
-                            time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
-                                                 lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
+                            if not args.localize_ts:
+                                time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                     lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
+                            else:
+                                time_bounds.append( (upper_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)-timedelta(0,args.upper_offset),
+                                                     lower_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)+timedelta(0,args.lower_offset)) )
                             for_upload.append( {'records'    : user_data,
                                                 'time_bounds': time_bounds[-1],
                                                 'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
@@ -380,15 +407,19 @@ if __name__ == "__main__":
                                 # lower_bound = record[args.lower_bound]
                                 if args.upper_bound == args.lower_bound:
                                     try:
-                                        upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
-                                        lower_bound = inj.parse_time_strings(user_data[i+1], inplace=False)[1][args.lower_bound]
+                                        upper_bound = inj.parse_time_strings(record, inplace=False, localize=args.localize_ts)[1][args.upper_bound]
+                                        lower_bound = inj.parse_time_strings(user_data[i+1], inplace=False, localize=args.localize_ts)[1][args.lower_bound]
                                     except:
-                                        lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
+                                        lower_bound = inj.parse_time_strings(record, inplace=False, localize=args.localize_ts)[1][args.lower_bound]
                                 else:
-                                    upper_bound = inj.parse_time_strings(record, inplace=False)[1][args.upper_bound]
-                                    lower_bound = inj.parse_time_strings(record, inplace=False)[1][args.lower_bound]
-                                time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
-                                                     lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
+                                    upper_bound = inj.parse_time_strings(record, inplace=False, localize=args.localize_ts)[1][args.upper_bound]
+                                    lower_bound = inj.parse_time_strings(record, inplace=False, localize=args.localize_ts)[1][args.lower_bound]
+                                if not args.localize_ts:
+                                    time_bounds.append( (upper_bound.replace(microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.replace(microsecond=0)+timedelta(0,args.lower_offset)) )
+                                else:
+                                    time_bounds.append( (upper_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)-timedelta(0,args.upper_offset),
+                                                         lower_bound.astimezone(ZoneInfo(args.local_tz)).replace(tzinfo=None, microsecond=0)+timedelta(0,args.lower_offset)) )
                                 for_upload.append( {'records'    : [record],
                                                     'time_bounds': time_bounds[-1],
                                                     'time_delta' : int((time_bounds[-1][1] - time_bounds[-1][0]).total_seconds()),
@@ -400,7 +431,7 @@ if __name__ == "__main__":
                         print("\n[Injector] Segmenting HRM dataset using generated time bounds...")
                         filtered_hr = []
                         for indx, item in enumerate(for_upload):
-                            print(f"  Upper bound: {item['time_bounds'][0]}\n  Lower bound: {item['time_bounds'][1]}\n  Time elapsed: {item['time_delta']} seconds")
+                            print(f"  Upper bound: {item['time_bounds'][0]}\n  Lower bound: {item['time_bounds'][1]}\n  Time elapsed: {item['time_delta']} seconds")                                    
                             # Filter HRM data by each of the defined bounds to
                             # extract only the samples whose timestamps fall
                             # within the bounds.

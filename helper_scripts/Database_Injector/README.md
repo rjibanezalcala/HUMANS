@@ -134,6 +134,8 @@ from the containing directory.
 |-l TIMESTAMP_NAME|--lower_bound TIMESTAMP_NAME|Selects the n<sup>th</sup> time stamp to use for the time bounds' lower bound. Selecting 'start' will use the n<sup>th</sup> trial's 'trial_start' time stamp, and 'end' will use the n+1<sup>th</sup> 'trial_end' timestamp. (default: trial_end)|
 |-uo SECONDS|--upper_offset SECONDS|Indicates the time offset to subtract from the upper time bound, in seconds. Must be integer value. (default: 1)|
 |-lo SECONDS|--lower_offset SECONDS|Indicates the time offset to add to the lower time bound, in seconds. Must be integer value. (default: 1)|
+|-loc|--localize_timestamps|Indicates whether to parse timestamps so in a way that makes them timezone-aware. This is useful if there is a timezone mismatch timestamps in the database and in the dataset to be segmented. (default: False)|
+|-ltz LOCAL_TZ|--local_timezone LOCAL_TZ|The timezone to use to localize timestamps in the dataset to be segmented. The timezone used to generate timestamps from the app is taken for bin/settings.ini. Must be identifiable from the IANA Time Zone Database, but can be either the full 'TZ Identifier' or the abbreviation. (default: America/Denver)|
 
 > [!NOTE]
 > If -u and -l are the same, the injector will generate the time bounds using the indicated upper bound (set by -u) from trial n, and the indicated lower bound (set by -l) from trial n+1. Otherwise, both upper and lower time bounds are taken from trial n.
