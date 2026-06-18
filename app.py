@@ -1298,8 +1298,8 @@ def before_request():
     referrer = request.referrer.split( ':'.join([host_ip, str(host_port)]) )[-1] if not request.referrer is None else 'None'  # The url path from the previous page
     retrival = request.headers['Accept'].split(',')[0] if request.method == 'GET' else None # The content (either html or css) that was downloaded, typically 'text/css' or 'text/html'
     
-    if request.path.startswith(app_settings.get('observed_urls', 'r/trial')) \
-    or referrer.startswith(app_settings.get('observed_urls', 'r/trial')):
+    if request.path.startswith(app_settings.get('observed_urls', r'/trial')) \
+    or referrer.startswith(app_settings.get('observed_urls', r'/trial')):
         if request.method == 'POST':
             session['trial_end'] = (timestamp, request.path)
             print(f"[BEFORE, POST] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0]-session['trial_start'][0])}")
