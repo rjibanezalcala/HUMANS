@@ -337,7 +337,7 @@ def summary():
     if request.method == 'POST':
         return redirect("/")
     return render_template('verify-summary.html',
-                           summary = f"Summary log has been written to {getcwd()}\verify-log_{session.get('ts')}.txt" )
+                           summary = f"Summary log has been written to file 'verify-log_{session.get('ts')}.txt' in path {getcwd()}")
 
 # --------------------- Run this when script is executed ----------------------
 if __name__ == '__main__':
