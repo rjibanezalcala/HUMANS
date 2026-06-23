@@ -16,6 +16,11 @@ story will be contained in '/output/{task type}/story_{story #}/', where the
 curly braces ( {} ) represent a placeholder. Each of the text files will be
 contained in '/output/{task type}/story_{story #}/', just how the app needs them.
 
+This script can also generate questions if they are not already present in the
+template. However, keep in mind that they will be generated programatically, and
+may be written a bit awkward. The questions are generated using the format
+"Would you like to {rew} or {cost}? (R{r_key},C{c_key})".
+
 -----------------------------------------------------------------------------------
 WHAT THIS SCRIPT IS NOT:
 
