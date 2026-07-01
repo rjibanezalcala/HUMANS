@@ -1845,15 +1845,15 @@ def consent():
         data = request.form.to_dict()
         # Validate input: Input must match the following two patterns,
         # otherwise participant is not allowed to continue.
+        pattern_names = r"^[A-Za-z]+(?:[ -][A-Za-z]+)*$"
+        # Pattern explanation: String must start with one or more letters
+        # and contain 2 or more all-letter-words separated by a hyphen (-)
+        # or a space.
+        pattern_initials = r"\b(?:[A-Z]\.?){2,}\b"
+        # Pattern explanation: String must be two or more capital letters
+        # optionally separated by a period (.).
         for key, value in data.items():
-            pattern_names = r"^[A-Za-z]+(?:[ -][A-Za-z]+)*$"
-            # Pattern explanation: String must start with one or more letters
-            # and contain 2 or more all-letter-words separated by a hyphen (-)
-            # or a space.
-            pattern_initials = r"\b(?:[A-Z]\.?){2,}\b"
-            # Pattern explanation: String must be two or more capital letters
-            # optionally separated by a period (.).
-            
+            value = value.strip()
             if key == "lname" and value == "":
                 # Allow empty last name field (some cultures don't include this in their names).
                 data['lname'] = " "
