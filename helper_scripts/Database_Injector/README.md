@@ -154,6 +154,9 @@ from the containing directory.
 6. You may name this file however you see fit, but ideally it should be named after the session's timestamp that appears on the summary graph with the format "yyyy-mm-dd_hh-mm-ss.csv" (for example, 2026-4-30_12-00-00.csv). Saving the file with this format helps the data upload process go a little bit smoother.
 7. Finally, close the Pulse Monitor window and move on to the next record.
 
+> [!CAUTION]
+> The injector uses the first and last *date* (year, month, and calendar day) listed in the HRM data to fetch records from the database to update them with the data. If two or more HRM files contain timestamps from the same day, the injector may erroneously think that the some of the records from that day have no HRM data that match them, even if they were contained in another file. This will result in it overwriting records it had previously updated with an empty list of HRM records ('[]'). If you created more than one HRM data file from the same day, you should manually merge them together so that all records follow chronological order *before* continuing to running the injector.
+
 ## Step 2: Begin data upload
 
 Once you are done organizing the data, navigate to "/helper_scripts/Database_Injector" and double-click "start_unsupervised.bat" This should start uploading all the .csv files contained in "/data"; this should take about 5 to 10 minutes, depending on how much data needs to be uploaded. You can also run "start_supervised.bat" if you want to check each upload individually :).
