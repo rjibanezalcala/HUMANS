@@ -484,7 +484,6 @@ if __name__ == "__main__":
                                 print(f"\n  >>> Updated {up_rows} row(s) <<<") if up_rows >= 1 and not up_rows is None else print("\n   Could not update database records.")
                         else:
                             print("\n   >>> Data was not uploaded to database <<<")
-                        break
                         if not args.donotmove:    
                             print(f"\n  Moving {file}\n  from '{ root_dir }\\{ user_id }'\n  to '{processed_dir}'")
                             move(f"{ root_dir }\\{ user_id }\\{ file }", f"{processed_dir}\\{ file }")
