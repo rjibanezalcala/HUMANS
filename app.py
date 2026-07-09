@@ -564,13 +564,13 @@ def get_starting_story_indx(
 
             cursor.close()
             conn.close()
-
+            
             num_stories_completed = (
-                int(raw_num_stories[0]) if raw_num_stories is not None else 0
+                int(raw_num_stories[0]) if raw_num_stories[0] is not None else 0
             )
 
-            if db_method == "count":
-                num_stories_completed -= 1
+            # if db_method == "count":
+            #     num_stories_completed -= 1
 
         except Exception as error:
             print(
@@ -1929,7 +1929,7 @@ def how_feel_pls():
                 session["subjectidnumber"],
                 num_stories,
                 reference_from=app_settings["next_story_from"],
-                db_method="direct",
+                db_method="count",
             )
 
             # Redirect user to final_end if no more stories are left.
@@ -1937,21 +1937,21 @@ def how_feel_pls():
                 set_session_params(
                     data={
                         "num_stories": int(num_stories),
-                        "max_story_indx": int(story_indices[-1]) - 1,
-                        "current_story_indx": int(story_indices[0]) - 1,
+                        "max_story_indx": story_indices[-1] - 1,
+                        "current_story_indx": story_indices[0],
                         "next_story_index": story_indices[0],
                         "story_num_overall": "None",
                     },
                     op="update",
                     verbose=bool(app_settings.get("verbose", 0)),
                 )
-                return redirect(url_for("final_end", story_index=story_indices[0] - 1))
+                return redirect(url_for("final_end", story_index=story_indices[0]))
             else:
                 set_session_params(
                     data={
                         "num_stories": int(num_stories),
-                        "max_story_indx": int(story_indices[-1]) - 1,
-                        "current_story_indx": int(story_indices[0]) - 1,
+                        "max_story_indx": story_indices[-1] - 1,
+                        "current_story_indx": story_indices[0],
                         "next_story_index": story_indices[0],
                         "story_num_overall": session["story_order"][
                             int(session["next_story_index"])
@@ -2244,7 +2244,7 @@ def story_num_refresh():
         verbose=bool(app_settings.get("verbose", 0)),
     )
 
-    print(f"\nStarting story {story_num_overall}")
+    print(f"\nStarting story {story_num_overall} ({current_story_indx}th in story order)")
     story_info = get_story_info(story_num_overall, story_relations)
     blurb = f"{story_info['topic']}"
     print(f"Current topic: {story_info['topic']} ({story_info['topic_id']})\n")
