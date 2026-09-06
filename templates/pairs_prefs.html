@@ -1,0 +1,45 @@
+{% extends 'trial.html' %}
+
+
+{% block content %}
+   <h2>Answer on a scale from 0-100 how much you would want to receive both of these items together.</h2>
+
+{% endblock %}
+
+{% block button %}
+<div class='center2'>
+    <form method = "POST">
+    	<dt> <label class="pref-label"> {{trial_number}}. {{question}}? </label></dt>
+    	
+    	<div class="slider slider-narrow">
+
+    <input
+        type="range"
+        min="0"
+        max="100"
+        value="50"
+        name="value"
+        oninput="currentValue.textContent = this.value">
+    <div style="display:flex; justify-content:space-between; margin-top:5px;">
+        <span>0</span>
+        <span>100</span>
+    </div>
+
+    <div style="text-align:center; margin-top:5px;">
+        Current value: <output id="currentValue">50</output>
+    </div>
+
+    
+
+</div>
+        
+        <br> 
+
+        <input type='submit' class='btn btn-primary'>
+    </form>
+</div>
+
+
+{% endblock %}
+
+

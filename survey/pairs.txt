@@ -1,0 +1,42 @@
+1	Finding a missing personal item + Smooth internet connection
+2	Hearing your favorite song play on the radio + A curated playlist
+3	Sitting in the back for a lecture/presentation + Watching a brief documentary on a topic you’re unfamiliar with
+4	A crisp and cold apple + Soft background noise
+5	Freshly cut flowers + A curated playlist
+6	An engaging book + Sitting in the back for a lecture/presentation
+7	Hearing your favorite song play on the radio + Sitting in the back for a lecture/presentation
+8	Freshly cut flowers + Watching a brief documentary on a topic you’re unfamiliar with
+9	Soft background noise + A local live performance/event
+10	Immaculately made bed with clean sheets + The gym machines unoccupied
+11	Immaculately made bed with clean sheets + Hearing your favorite song play on the radio
+12	A soft blanket + A comfortable recliner
+13	A nice desk lamp + An interesting conversation
+14	A soft blanket + All green lights/walk signs during your commute home
+15	Immaculately made bed with clean sheets + Your room at the perfect temperature
+16	Your room at the perfect temperature + A specialty coffee or dessert from a local café
+17	All green lights/walk signs during your commute home + An interesting conversation
+18	Your room at the perfect temperature + A local live performance/event
+19	A soft blanket + A nice desk lamp
+20	Hearing your favorite song play on the radio + A local live performance/event
+21	A comfortable recliner + A pleasantly surprising text message
+22	Freshly cut flowers + A crisp and cold apple
+23	A local live performance/event + The gym machines unoccupied
+24	Finding a missing personal item + A specialty coffee or dessert from a local café
+25	A curated playlist + An engaging book
+26	All green lights/walk signs during your commute home + Finding a missing personal item
+27	The gym machines are unoccupied + Smooth internet connection
+28	Smooth internet connection + An engaging book
+29	A comfortable recliner + Watching a brief documentary on a topic you’re unfamiliar with
+30	Smooth internet connection + A crisp and cold apple
+31	A soft blanket + Immaculately made bed with clean sheets
+32	All green lights/walk signs during your commute home + The gym machines are unoccupied
+33	Finding a missing personal item + Sitting in the back for a lecture/presentation
+34	A pleasantly surprising text message + An interesting conversation
+35	A crisp and cold apple + A specialty coffee or dessert from a local café
+36	Freshly cut flowers + A nice desk lamp
+37	A nice desk lamp + Smooth internet connection
+38	A curated playlist + Soft background noise
+39	A specialty coffee or dessert from a local café + A pleasantly surprising text message
+40	A comfortable recliner + Your room at the perfect temperature
+41	An engaging book + Watching a brief documentary on a topic you’re unfamiliar with
+42	Soft background noise + A pleasantly surprising text message

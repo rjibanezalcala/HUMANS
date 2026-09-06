@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+{% endblock %}
+
+{% block subheader %}
+
+<h2> Please answer the following questions </h2>
+
+{% endblock %}
+
+{% block content %}
+
+<div class='center2'>
+	<form method="post">
+		<div class="personal-info" id="demographics">
+			<span class="instructions"></span>
+			
+			<label for="sex">Sex:</label> </dt>
+			<select name="sex" id="sex" title="The sex that was assigned to you at birth (required)." required>
+				<option class="select-option" value="" disabled selected>Select one</option>
+				<option class="select-option" value="male">Male</option>
+				<option class="select-option" value="female">Female</option>
+				<option class="select-option" value="intersex">Intersex</option>
+				<option class="select-option" value="undisclosed">Prefer not to disclose</option>
+			</select>
+		<input type="submit" class="btn btn-primary"/>
+	</form>
+</div>
+
+{%endblock %}
+
+
+
