@@ -1,0 +1,31 @@
+{% extends 'trial.html' %}
+
+
+{% block content %}
+   <h2>DIFFERENT THAN PREVIOUS INSTRUCTIONS, READ CAREFULLY! <br>Select the one thing out of the options that you want most right now (you can only select one thing).</h2>
+
+{% endblock %}
+
+{% block button %}
+<div class='center2'>
+    <form method = "POST">
+        {% for choice in choices %}
+        <div>
+            <label>
+                <input
+                    type="radio"
+                    name="answer"
+                    value="{{ choice }}"
+                    required>
+                {{ choice }}
+            </label>
+        </div>
+        {% endfor %}
+        <br> 
+
+        <input type='submit' class='btn btn-primary'>
+    </form>
+</div>
+
+
+{% endblock %}

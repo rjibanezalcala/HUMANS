@@ -1,0 +1,42 @@
+1	A. A soft blanket  |  B. All green lights/walk signs during your commute home
+2	A. A crisp and cold apple  |  B. Smooth internet connection
+3	A. Finding a missing personal item  |  B. Sitting in the back for a lecture/presentation
+4	A. A local live performance/event  |  B. The gym machines unoccupied
+5	A. Soft background noise  |  B. A pleasantly surprising text message
+6	A. Immaculately made bed with clean sheets  |  B. Hearing your favorite song play on the radio
+7	A. Your room at the perfect temperature  |  B. A specialty coffee or dessert from a local café
+8	A. Freshly cut flowers  |  B. An engaging book
+9	A. A nice desk lamp  |  B. An interesting conversation
+10	A. A soft blanket  |  B. Immaculately made bed with clean sheets
+11	A. Hearing your favorite song play on the radio  |  B. A curated playlist
+12	A. A pleasantly surprising text message  |  B. An interesting conversation
+13	A. A crisp and cold apple  |  B. A specialty coffee or dessert from a local café
+14	A. An engaging book  |  B. Watching a brief documentary on a topic you’re unfamiliar with
+15	A. A soft blanket  |  B. Immaculately made bed with clean sheets  |  C. Sitting in the back for a lecture/presentation
+16	A. Hearing your favorite song play on the radio  |  B. A curated playlist  |  C. Soft background noise
+17	A. A pleasantly surprising text message  |  B. An interesting conversation  |  C. Freshly cut flowers
+18	A. A crisp and cold apple  |  B. A specialty coffee or dessert from a local café  |  C. A nice desk lamp
+19	A. All green lights/walk signs during your commute home  |  B. A local live performance/event  |  C. Smooth internet connection
+20	A. A comfortable recliner  |  B. Finding a missing personal item  |  C. Watching a brief documentary on a topic you’re unfamiliar with
+21	A. Your room at the perfect temperature  |  B. The gym machines unoccupied  |  C. An engaging book
+22	A. A soft blanket  |  B. All green lights/walk signs during your commute home  |  C. A pleasantly surprising text message
+23	A. Immaculately made bed with clean sheets  |  B. A specialty coffee or dessert from a local café  |  C. An interesting conversation
+24	A. Freshly cut flowers  |  B. A nice desk lamp  |  C. Smooth internet connection
+25	A. Hearing your favorite song play on the radio  |  B. The gym machines unoccupied  |  C. Sitting in the back for a lecture/presentation
+26	A. A soft blanket  |  B. Immaculately made bed with clean sheets  |  C. A comfortable recliner
+27	A. Hearing your favorite song play on the radio  |  B. Soft background noise  |  C. A curated playlist
+28	A. An engaging book  |  B. Watching a brief documentary on a topic you’re unfamiliar with  |  C. Sitting in the back for a lecture/presentation
+29	A. A soft blanket  |  B. Immaculately made bed with clean sheets  |  C. A comfortable recliner  |  D. Sitting in the back for a lecture/presentation
+30	A. Hearing your favorite song play on the radio  |  B. A curated playlist  |  C. Soft background noise  |  D. A local live performance/event
+31	A. A pleasantly surprising text message  |  B. An interesting conversation  |  C. A pleasantly surprising text message  |  D. Freshly cut flowers
+32	A. A crisp and cold apple  |  B. A specialty coffee or dessert from a local café  |  C. Your room at the perfect temperature  |  D. A nice desk lamp
+33	A. A soft blanket  |  B. All green lights/walk signs during your commute home  |  C. A local live performance/event  |  D. An engaging book
+34	A. Immaculately made bed with clean sheets  |  B. Finding a missing personal item  |  C. Smooth internet connection  |  D. A specialty coffee or dessert from a local café
+35	A. A comfortable recliner  |  B. Freshly cut flowers  |  C. A curated playlist  |  D. An interesting conversation
+36	A. Your room at the perfect temperature  |  B. Hearing your favorite song play on the radio  |  C. A pleasantly surprising text message  |  D. Sitting in the back for a lecture/presentation
+37	A. All green lights/walk signs during your commute home  |  B. Finding a missing personal item  |  C. Smooth internet connection  |  D. The gym machines unoccupied
+38	A. A crisp and cold apple  |  B. A specialty coffee or dessert from a local café  |  C. A soft blanket  |  D. Immaculately made bed with clean sheets
+39	A. Hearing your favorite song play on the radio  |  B. A curated playlist  |  C. An engaging book  |  D. Watching a brief documentary on a topic you’re unfamiliar with
+40	A. A nice desk lamp  |  B. Soft background noise  |  C. Freshly cut flowers  |  D. Your room at the perfect temperature
+41	A. A soft blanket  |  B. Immaculately made bed with clean sheets  |  C. A comfortable recliner  |  D. Your room at the perfect temperature
+42	A. Hearing your favorite song play on the radio  |  B. A local live performance/event  |  C. Soft background noise  |  D. A curated playlist
