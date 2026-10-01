@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+      <!-- <div class="card shadow"> 
+        <div class="card-body p-4">-->
+
+          <h2 class="text-center mb-4">Instructions</h2>
+
+          <p>Imagine that you are currently spending time in a comfortable, neutral room. Think of this as a baseline room for a functional living space.</p>
+
+          <p>For each question, select the option that best reflects your immediate personal preference in that fictional room.</p>
+
+          <p>There are no right or wrong answers. We are interested only in what appeals to you at the moment you complete the questionnaire.</p>
+
+          <p>You will be able to submit after the slider has been moved and 5 seconds have passed.</p>
+
+
+          <div class="text-center mt-4">
+            <form method="POST">
+              <input type="submit" id="submitBtn" class="btn btn-primary btn-lg" value="Continue" disabled>
+            </form>
+          </div>
+
+        <!-- </div>
+      </div> -->
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const submitBtn = document.getElementById('submitBtn');
+
+    setTimeout(function () {
+        submitBtn.disabled = false;
+    }, 5000);
+});
+</script>
+
+{% endblock %}

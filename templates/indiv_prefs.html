@@ -2,44 +2,77 @@
 
 
 {% block content %}
-   <h2>Answer how much you want this item right now, from 0 (not at all) to 100 (a lot).</h2>
-
+<div class="row justify-content-center mt-5">
+    <div class="col-lg-9 col-xl-8">
+        <h6>Imagine you are currently spending time in a comfortable, neutral room, what you would consider a baseline room for a functional space. <b>Indicate how much you want this item right now, from 0 (not at all) to 100 (a lot).</b></h6>
+    </div>
+</div>
 {% endblock %}
 
 {% block button %}
-<div class='center2'>
-    <form method = "POST">
-    	<dt> <label class="pref-label"> {{trial_number}}. {{question}}? </label></dt>
-    	
-    	<div class="slider slider-narrow">
+<div class="row justify-content-center">
+    <div class="col-lg-9 col-xl-8">
+        <div class='center'>
+            <div class="question-block">
+                <h2> {{trial_number}}. {{question}}? </h2>
+            </div>
 
-    <input
-        type="range"
-        min="0"
-        max="100"
-        value="50"
-        name="value"
-        oninput="currentValue.textContent = this.value">
-    <div style="display:flex; justify-content:space-between; margin-top:5px;">
-        <span>0</span>
-        <span>100</span>
+            <form method = "POST">
+                <div class="slider-block">
+                    <div class="slider slider-narrow">
+                        <input type="range" min="0" max="100" value="50" name="value" oninput="currentValue.textContent = this.value" id="responseSlider">
+
+                        <!-- Slider labels -->
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Not at all</span>
+                            <span>A lot</span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-secondary mb-4">
+                            <span>0</span>
+                            <span>100</span>
+                        </div>
+
+                        <div style="text-align:center; margin-top:5px;">
+                            Current value: <output id="currentValue">50</output>
+                        </div>
+                    </div>
+
+
+                </div>
+                <br> 
+                <input type="submit" class="btn btn-primary" value="Submit" id="submitBtn" disabled>
+            </form>
+        </div>
     </div>
-
-    <div style="text-align:center; margin-top:5px;">
-        Current value: <output id="currentValue">50</output>
-    </div>
-
-    
-
-</div>
-        
-        <br> 
-
-        <input type='submit' class='btn btn-primary'>
-    </form>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const slider = document.getElementById('responseSlider');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const defaultValue = slider.value;
+
+    let moved = true;
+    let timerFinished = false;
+
+    function updateButton() {
+        submitBtn.disabled = !(moved && timerFinished);
+    }
+
+    slider.addEventListener('input', function () {
+        if (slider.value !== defaultValue) {
+            moved = true;
+            updateButton();
+        }
+    });
+
+    setTimeout(function () {
+        timerFinished = true;
+        updateButton();
+    }, {{ timeout | tojson }});
+
+});
+</script>
 
 {% endblock %}
-
-
