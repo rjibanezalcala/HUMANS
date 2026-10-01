@@ -1,42 +1,42 @@
-1	Finding a missing personal item + Smooth internet connection
-2	Hearing your favorite song play on the radio + A curated playlist
-3	Sitting in the back for a lecture/presentation + Watching a brief documentary on a topic you’re unfamiliar with
-4	A crisp and cold apple + Soft background noise
-5	Freshly cut flowers + A curated playlist
-6	An engaging book + Sitting in the back for a lecture/presentation
-7	Hearing your favorite song play on the radio + Sitting in the back for a lecture/presentation
-8	Freshly cut flowers + Watching a brief documentary on a topic you’re unfamiliar with
-9	Soft background noise + A local live performance/event
-10	Immaculately made bed with clean sheets + The gym machines unoccupied
-11	Immaculately made bed with clean sheets + Hearing your favorite song play on the radio
-12	A soft blanket + A comfortable recliner
-13	A nice desk lamp + An interesting conversation
-14	A soft blanket + All green lights/walk signs during your commute home
-15	Immaculately made bed with clean sheets + Your room at the perfect temperature
-16	Your room at the perfect temperature + A specialty coffee or dessert from a local café
-17	All green lights/walk signs during your commute home + An interesting conversation
-18	Your room at the perfect temperature + A local live performance/event
-19	A soft blanket + A nice desk lamp
-20	Hearing your favorite song play on the radio + A local live performance/event
-21	A comfortable recliner + A pleasantly surprising text message
-22	Freshly cut flowers + A crisp and cold apple
-23	A local live performance/event + The gym machines unoccupied
-24	Finding a missing personal item + A specialty coffee or dessert from a local café
-25	A curated playlist + An engaging book
-26	All green lights/walk signs during your commute home + Finding a missing personal item
-27	The gym machines are unoccupied + Smooth internet connection
-28	Smooth internet connection + An engaging book
-29	A comfortable recliner + Watching a brief documentary on a topic you’re unfamiliar with
-30	Smooth internet connection + A crisp and cold apple
-31	A soft blanket + Immaculately made bed with clean sheets
-32	All green lights/walk signs during your commute home + The gym machines are unoccupied
-33	Finding a missing personal item + Sitting in the back for a lecture/presentation
-34	A pleasantly surprising text message + An interesting conversation
-35	A crisp and cold apple + A specialty coffee or dessert from a local café
-36	Freshly cut flowers + A nice desk lamp
-37	A nice desk lamp + Smooth internet connection
-38	A curated playlist + Soft background noise
-39	A specialty coffee or dessert from a local café + A pleasantly surprising text message
-40	A comfortable recliner + Your room at the perfect temperature
-41	An engaging book + Watching a brief documentary on a topic you’re unfamiliar with
-42	Soft background noise + A pleasantly surprising text message
+1	There is a nice tea set you may sample while in the room | Soft background noise
+2	Sitting in a comfortable recliner | A set of challenging logic puzzles
+3	A set of challenging logic puzzles | A crochet starter set that guides you through a project
+4	Hot salted fries | A double cheeseburger
+5	A 3D model kit to put together | Watch a brief documentary on a topic you’re unfamiliar with
+6	A double cheeseburger | An arrangement of freshly cut flowers placed nearby
+7	A double cheeseburger | There is a nice tea set you may sample while in the room
+8	An ice-cold soda | A double cheeseburger	
+9	A soft blanket | Have an interesting conversation with a colleague
+10	The room has a smooth internet connection | A soft blanket
+11	A set of challenging logic puzzles | A soft blanket
+12	Sitting in a comfortable recliner | The room has a smooth internet connection
+13	A specialty coffee or dessert from a local café is available | A soft blanket
+14	A soft blanket  | A set of challenging logic puzzles
+15	Your favorite song plays on a radio | A soft blanket
+16	A crochet starter set that guides you through a project | A set of resistance bands
+17	Sitting in a comfortable recliner | The room is furnished with standard gym equipment
+18	Your favorite song plays on a radio | The room has a smooth internet connection
+19	A soft blanket | A 3D model kit to put together
+20	There is a nice tea set you may sample while in the room | An ice-cold soda
+21	A stack of physical documents to sort and file into color coded folders | A crochet starter set that guides you through a project
+22	The room has a smooth internet connection | Have an interesting conversation with a colleague
+23	Soft background noise | Your favorite song plays on a radio
+24	A distraction-free strategy chat about goal setting for the upcoming week | A stack of physical documents to sort and file into color coded folders
+25	The room has a smooth internet connection | Soft background noise
+26	A double cheeseburger | Sitting in a comfortable recliner
+27	A double cheeseburger | Hot salted fries
+28	Sitting in a comfortable recliner | A set of resistance bands
+29	Your favorite song plays on a radio | An arrangement of freshly cut flowers placed nearby
+30	A bottle of chilled sparkling water | An ice-cold soda
+31	Sitting in a comfortable recliner | Hot salted fries
+32	The room is furnished with standard gym equipment | A double cheeseburger
+33	An engaging book to read in the room | A set of challenging logic puzzles
+34	An arrangement of freshly cut flowers placed nearby | A crochet starter set that guides you through a project
+35	A distraction-free strategy chat about goal setting for the upcoming week | The room has a smooth internet connection
+36	A specialty coffee or dessert from a local café is available | There is a nice tea set you may sample while in the room
+37	Sitting in a comfortable recliner | A soft blanket
+38	There is a nice tea set you may sample while in the room | Your favorite song plays on a radio
+39	A set of challenging logic puzzles | There is a nice tea set you may sample while in the room
+40	A set of resistance bands | A stack of physical documents to sort and file into color coded folders
+41	A bowl of hot, hearty soup | A bottle of chilled sparkling water
+42	An arrangement of freshly cut flowers placed nearby | Soft background noise

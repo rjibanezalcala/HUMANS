@@ -2,12 +2,19 @@
 
 {% block header %}
 
-<h3> If you are here, you have completed the experiment. </br></br>
-Thank you for your contribution! </h3>
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-8 col-lg-7">
+			<h3> If you are here, you have completed the experiment. </br></br>
+			Thank you for your contribution! </h3>
 
-<h2>
-Your confirmation number is: {{rand_num}} </br></br>
+			<h2>
+				Your confirmation number is: {{rand_num}} <br><br>
 
-Please take a screenshot of this page, and email afriedman@utep.edu with your confirmation number to receive credit for completion.
+				Please take a screenshot of this page, and email afriedman@utep.edu with your confirmation number to receive credit for completion.
+			</h2>
+		</div>
+	</div>
+</div>
 
 {% endblock %}

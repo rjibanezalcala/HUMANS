@@ -233,7 +233,6 @@ form {
   justify-content: center;
   align-items: center;
   height: fit-content;
-  width: fit-content;
   margin-top: 3em;
 }
 
@@ -286,7 +285,7 @@ form {
 /*** UI Inputs ***/
 /* Range sliders */
 input[type="range"].slider-narrow {
-  width: 200px;
+  width: 300px;
   margin: 0;
 }
 
@@ -330,6 +329,24 @@ input[type="range"].slider-wide {
   text-align: -webkit-center;
 }
 
+.slider-narrow {
+  width: 300px;
+  max-width: 90vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.slider input[type="range"] {
+  width: 100%;
+  display: block;
+}
+
+.question-block,
+.slider-block {
+  display: block;
+  width: 100%;
+}
+
 /* Buttons */
 .btn-primary {
   /* Alignment */
@@ -367,6 +384,15 @@ input[type="range"].slider-wide {
   margin-top: 5em;
   /* Styling */
   width: 6em;
+}
+
+.btn-primary:disabled,
+.btn-primary.disabled {
+    background-color: #9fc5ff;
+    border-color: #9fc5ff;
+    color: white;
+    opacity: 1;   /* prevents Bootstrap from fading it */
+    cursor: not-allowed;
 }
 
 nav + nav {
@@ -436,6 +462,16 @@ input[type="text"] {
 }
 #session-notes:focus {
   width: 50em;
+}
+
+.mult {
+    font-size: 24px;
+    line-height: 1.8;
+}
+
+.mult input[type="radio"] {
+    transform: scale(1.25);
+    margin-right: 12px;
 }
 
 /* Checkboxes */
