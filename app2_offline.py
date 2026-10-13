@@ -458,7 +458,7 @@ radio_qs = multi_tsv_to_dict("survey/radio.txt")
 qid_map = reverse_map(indiv_qs)
 
 # 7. Define the workflow
-submit_timeout_ms = 50
+submit_timeout_ms = 5000
 
 # 8. Connect the 'log_template_renders' callback to the 'template_rendered'
 # signal so the callback executes every time a template is rendered.
