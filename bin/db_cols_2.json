@@ -1,13 +1,14 @@
 {
+	"subjectidnumber": "VARCHAR",
 	"sex": "VARCHAR",
 	"phase": "VARCHAR",
+	"page": "VARCHAR",
 	"question_id": "VARCHAR",
-	"question_order": "VARCHAR",
-	"option_order": "VARCHAR",
+	"question_phase_id": "VARCHAR",
+	"question_display_order": "VARCHAR",
+	"option_display_order": "VARCHAR",
 	"response": "VARCHAR",
 	"trial_start": "VARCHAR",
 	"trial_end": "VARCHAR",
-	"trial_elapsed": "VARCHAR",
-	"subjectidnumber": "VARCHAR",
-	"page": "VARCHAR"
+	"trial_elapsed": "VARCHAR"
 }

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="row justify-content-center mt-5">
     <div class="col-lg-9 col-xl-8">
-        <h6>Imagine you are currently spending time in a comfortable, neutral room, what you would consider a baseline room for a functional space. <b>Indicate how much you want this item right now, from 0 (not at all) to 100 (a lot).</b></h6>
+        <h6><b>Indicate how much you want this right now, from 0 (not at all) to 100 (a lot).</b></h6>
     </div>
 </div>
 {% endblock %}
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const defaultValue = slider.value;
 
-    let moved = false;
+    let moved = !{{ require_slider | tojson }};
     let timerFinished = false;
 
     function updateButton() {

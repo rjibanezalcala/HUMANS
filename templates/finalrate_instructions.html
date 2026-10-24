@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+      <!-- <div class="card shadow"> 
+        <div class="card-body p-4">-->
+
+          <h2 class="text-center mb-4">Instructions (Section 5 of 5)</h2>
+
+          <p>In this final section, you will complete a brief re-rating of individual items. This will use the sliding scale from the earlier sections and follow the same framework as those questions. As before, respond based on your immediate reaction to the item presented. Once completed, your responses will be submitted automatically. The last page will display a randomly generated nine-digit number that you will need to capture/screenshot/print screen or otherwise keep and send to receive the extra credit.</p>
+
+
+          <div class="text-center mt-4">
+            <form method="POST">
+              <input type="submit" id="submitBtn" class="btn btn-primary btn-lg" value="Continue" disabled>
+            </form>
+          </div>
+
+        <!-- </div>
+      </div> -->
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const submitBtn = document.getElementById('submitBtn');
+
+    setTimeout(function () {
+        submitBtn.disabled = false;
+    }, 5000);
+});
+</script>
+
+
+{% endblock %}

@@ -1,25 +1,70 @@
-1	A soft blanket	
-2	A bowl of mixed berries	
-3	Sitting in a comfortable recliner	
-4	A 3D model kit to put together	
-5	An ice-cold soda	
-6	An arrangement of freshly cut flowers placed nearby	
-7	A crisp and cold apple	
-8	A set of resistance bands	
-9	Your favorite song plays on a radio	
-10	Hot salted fries	
-11	A set of challenging logic puzzles	
-12	Soft background noise	
-13	The room is furnished with standard gym equipment	
-14	A bowl of hot, hearty soup	
-15	The room has a smooth internet connection	
-16	There is a nice tea set you may sample while in the room	
-17	A specialty coffee or dessert from a local café is available	
-18	An engaging book to read in the room	
-19	Have an interesting conversation with a colleague	
-20	Watch a brief documentary on a topic you’re unfamiliar with	
-21	A distraction-free strategy chat about goal setting for the upcoming week	
-22	A crochet starter set that guides you through a project	
-23	A bottle of chilled sparkling water	
-24	A stack of physical documents to sort and file into color coded folders	
-25	A double cheeseburger	
+activity_1	Read a book
+activity_2	Put together a 3D model kit
+activity_3	Solve a set of logic puzzles
+activity_4	Attend a writing workshop
+activity_5	Work on a crochet starter project
+activity_6	Play a complex solo board game
+activity_7	Put together a jigsaw puzzle
+activity_8	Sketch or draw
+activity_9	Solve a mechanical puzzle (e.g. Rubik's cube)
+activity_10	Play a game of solitaire
+activity_11	Learn and practice an origami shape
+activity_12	Learn mathematical principles and their application
+activity_13	Read a phone book cover to cover and take a quiz on its contents
+activity_14	Work on your dream project with limitless resources
+comfort_1	Sit in a comfortable recliner
+comfort_2	Have a soft blanket
+comfort_3	Walk on heated floors
+comfort_4	Rest in a clean, well-made bed
+comfort_5	Wear cozy socks
+comfort_6	Wear a plush robe
+comfort_7	Sit in an ergonomic office chair
+comfort_8	Use hand warmers on a cold day
+comfort_9	Take a warm shower
+comfort_10	Wear a freshly dryed sweater
+comfort_11	Sit next to a warm crackling fireplace
+comfort_12	Curl up on a large couch
+comfort_13	Sit on a freezing, wet metal bench
+comfort_14	Wrap yourself in a heated blanket in a perfectly cozy room
+food_1	Eat a bowl of mixed berries
+food_2	Drink an ice cold soda
+food_3	Eat a crisp apple
+food_4	Eat hot salted fries
+food_5	Eat a bowl of hearty soup
+food_6	Drink a bottle of sparkling water
+food_7	Eat a double cheeseburger
+food_8	Eat a carrot
+food_9	Eat a salad
+food_10	Eat broccoli
+food_11	Eat cauliflower
+food_12	Eat a tomato
+food_13	Drink rancid-smelling chunky milk
+food_14	Enjoy a fresh, delicious gourmet meal
+listen_1	Listen to gentle background rain
+listen_2	Listen to gentle ocean waves
+listen_3	Listen to your favorite playlist uninterrupted
+listen_4	Listen to crackling fireplace sounds
+listen_5	Listen to instrumental music
+listen_6	Listen to an audio book
+listen_7	Listen to lo-fi music
+listen_8	Listen to background forest noises
+listen_9	Listen to a live classical performance
+listen_10	Listen to smooth jazz
+listen_11	Listen to a podcast
+listen_12	Listen to solo piano music
+listen_13	Listen to screeching fingernails on a chalkboard
+listen_14	Listen to your favorite song on a high-fidelity audio setup
+transport_1	Ride on a bus
+transport_2	Take a train
+transport_3	Ride a bicycle
+transport_4	Take a taxi
+transport_5	Ride on a subway
+transport_6	Fly on an airplane
+transport_7	Drive for a roadtrip
+transport_8	Be a passenger for a roadtrip
+transport_9	Take a subway
+transport_10	Walk a scenic route
+transport_11	Hike a moderate trail
+transport_12	Ride in an aerial tramway
+transport_13	Be stuck on an unventilated bus in gridlocked traffic
+transport_14	Ride on a first-class bullet train with nice views

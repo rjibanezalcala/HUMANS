@@ -1,0 +1,10 @@
+activity_1	Read a book
+activity_2	Put together a 3D model kit
+comfort_1	Sit in a comfortable recliner
+comfort_2	Have a soft blanket
+food_1	Eat a bowl of mixed berries
+food_2	Drink an ice cold soda
+listen_1	Listen to gentle background rain
+listen_2	Listen to gentle ocean waves
+transport_1	Ride on a bus
+transport_2	Take a train

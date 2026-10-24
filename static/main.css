@@ -443,6 +443,22 @@ input[type="text"] {
   cursor: text;
 }
 
+input[type="text"].small-input {
+  /* Reset */
+  appearance: none;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  /* Personalize */
+  width: 16em;
+  height: 2em;
+  padding: 0em 4em 0em 1em;
+  color: inherit;
+  border-radius: 0.25em;
+  box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.2);
+  cursor: text;
+}
+
 #session-notes {
   /* Reset */
   appearance: none;

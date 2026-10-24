@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block header %}
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+      <!-- <div class="card shadow"> 
+        <div class="card-body p-4">-->
+
+          <h2 class="text-center mb-4">Please read the following overview before beginning:</h2>
+
+          <p>This questionnaire is divided into 5 sections. You will complete them sequentially in a single session estimated to take around 50 minutes to complete.</p>
+
+          <ol>
+            <li>Initial item ratings. In this section you will evaluate individual items and scenarios one at a time on a scale from 0 (extremely undesirable) to 100 (incredibly desirable).</li>
+            <li>You will evaluate some more individual items on the same 0 to 100 scale.</li>
+            <li>Combined item ratings. You will rate pairs of items presented together, indicating how desirable having both items simultaneously would be on the same 0 to 100 scale.</li>
+            <li>Multiple-choice section. You will answer questions where you choose your single most preferred option from sets of 2, 3, or 4 choices.</li>
+            <li>Final item ratings. You will complete a final re-rating of individual items on the 0 to 100 scale.</li>
+          </ol>
+
+          <p>While completing the questionnaire, each question will have a five second delay before you can respond. For questions with a slider, you must move the slider (even if it’s just a little and return it to the central position) before moving on to the next question. In the multiple-choice section, an answer must be selected to advance to the next question.</p>
+
+          <p><b>Please do not close this tab or this browser, or your progress may be lost.</b></p>
+
+          <p>Instructions will be provided at the beginning of each section.</p>
+
+
+          <div class="text-center mt-4">
+            <form method="POST">
+              <input type="submit" id="submitBtn" class="btn btn-primary btn-lg" value="Continue" disabled>
+            </form>
+          </div>
+
+        <!-- </div>
+      </div> -->
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const submitBtn = document.getElementById('submitBtn');
+
+    setTimeout(function () {
+        submitBtn.disabled = false;
+    }, 15000);
+});
+</script>
+{% endblock %}

@@ -5,26 +5,26 @@ Human Decision Making App v32.4.4
 """
 
 ## Webserver-related imports
-import itertools
 import json
 import os
 
 ## Utility imports
 import re
 import sys
-import time
+import csv
+import io
+
 from argparse import ArgumentParser
 from ast import literal_eval
 from configparser import ConfigParser as cfgp
-from copy import deepcopy
 from datetime import datetime
+from itertools import combinations
+from math import comb, inf
 from random import randint, sample, shuffle
 from secrets import token_hex
 from shutil import copy2
-from subprocess import Popen
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
-
-import pandas as pd
 
 # import fnmatch
 import psycopg2
@@ -43,12 +43,8 @@ from flask import (
     url_for,
 )
 from flask_session import Session
-
-# from flask_limiter import Limiter
-# from flask_limiter.util import get_remote_address
-from markupsafe import Markup
-from pdf_signer import PDFSigner
 from waitress import serve
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # -------------------------- Configure flask session --------------------------
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -63,6 +59,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = token_hex(32)
 app.config["SESSION_PERMANENT"] = False  # Session data is deleted after session expires
 app.config["SESSION_TYPE"] = "filesystem"  # Session data is stored in the host
+app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1) # Use relative file paths
 # Initialise the app with server-side sessions to handle user data
 Session(app)
 # -----------------------------------------------------------------------------
@@ -245,9 +242,9 @@ def write_to_db(response):
     page = trial_start[1]
 
     if start_ts is not None and end_ts is not None:
-        elapsed = end_ts - start_ts
-        trial_start_str = start_ts.strftime("%a %b %d %H:%M:%S.%f %Y %Z")
-        trial_end_str = end_ts.strftime("%a %b %d %H:%M:%S.%f %Y %Z")
+        trial_start_str = int(start_ts.timestamp() * 1000)
+        trial_end_str = int(end_ts.timestamp() * 1000)
+        elapsed = trial_end_str - trial_start_str
         trial_elapsed_str = str(elapsed)
     else:
         trial_start_str = None
@@ -258,14 +255,15 @@ def write_to_db(response):
         "subjectidnumber": session.get("subjectidnumber"),
         "sex": session.get("sex"),
         "phase": session.get("phase"),
+        "page": page,
         "question_id": session.get("question_id"),
-        "question_order": session.get("question_order"),
-        "option_order": json.dumps(session.get("option_order")),
+        "question_phase_id": session.get("question_phase_id"),
+        "question_display_order": session.get("question_order"),
+        "option_display_order": json.dumps(session.get("option_order")),
         "response": json.dumps(response),
         "trial_start": trial_start_str,
         "trial_end": trial_end_str,
-        "trial_elapsed": trial_elapsed_str,
-        "page": page
+        "trial_elapsed": trial_elapsed_str
     }
     print("RECORD TO WRITE: " + str(record))
 
@@ -317,6 +315,7 @@ def set_session_params(data=None, op="update", exclude=[], verbose=False):
                     # Update data table-relevant entries to initialize them to the
                     # correct data type.
                     "question_id": None,
+                    "question_phase_id": None,
                     "trial_start": (None, None),
                     "trial_end": (None, None),
                     "option_order": None,
@@ -467,7 +466,6 @@ def log_template_renders(sender, template, context, **extra):
     # timestamp = timezone.localize(datetime.now())
     timestamp = datetime.now(timezone)
     page = request.path
-    observed_paths = app_settings.get("observed_urls", tuple(r"/p"))
     print(f"[SIGNAL.TEMPLATE_RENDERED] Rendered template {template.name or 'string template'} at timestamp {timestamp} in url {page}")
 
     session["trial_start"] = (timestamp, page)
@@ -475,145 +473,125 @@ def log_template_renders(sender, template, context, **extra):
     print(f"[SIGNAL.TEMPLATE_RENDERED] Logged 'trial_start'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}")
 
 
-def sign_pdf(
-    idno,
-    name,
-    signature,
-    proxysignature=None,
-    stamp_document=True,
-    include_timestamp=True,
-):
-    signer = PDFSigner(
-        output_dir=os.path.abspath(f"{os.getcwd()}/graph_data/{idno}"),
-        output_name=f"informed_consent_signed_{idno}",
-        ts_region=app_settings.get("timestamp_timezone", "UTC"),
-    )
-
-    if not os.path.isdir(signer.output_dir):
-        signer.make_directory()
-
-    try:
-        document = signer.open_pdf()
-
-        # Sign participant's name
-        signer.sign_name(document, name, line_index=[0])
-        # Sign date in both "Date" lines
-        signer.sign_date(document, signer.ts_short, line_index=[2, 4])
-        # Sign participant's initials
-        signer.sign_initials(document, signature, line_index=[1])
-        # Sign guardian's initials (if applicable)
-        if not proxysignature is None:
-            signer.sign_initials(document, proxysignature, line_index=[3])
-        # Stamp document to attest that is was signed electronically
-        if stamp_document:
-            signer.stamp_pdf(document)
-        # Add a timestamp
-        if include_timestamp:
-            signer.writeonpdf(
-                document,
-                datetime.now(signer.ts_region).strftime(signer.ts_format),
-                x=230,
-                y=730,
-                use_selfcoords=False,
-            )
-
-        signer.save_pdf()
-    finally:
-        signer.close_pdf()
-        del document, signer
-
-
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # Helper functions for parsing the new question format
-
-import csv
 
 def tsv_to_dict(filepath):
     result = {}
     with open(filepath, "r", encoding="utf-8") as f:
         reader = csv.reader(f, delimiter="\t")
         for row in reader:
-            key = int(row[0])
+            key = row[0]
             value = row[1].strip()
             result[key] = value
     return result
 
-def reverse_map(map):
-    reversed_map = {}
-    for k in map:
-        reversed_map[map[k]] = "indiv_" + str(k)
-    return reversed_map
+# select the items that are closest to 50
+def select_indiv_items(ratings, n_items=24):
+    ranked = sorted(ratings.items(), key=lambda x: abs(x[1] - 100))
+    return [k for k, v in ranked[:n_items]]
 
-def multi_tsv_to_dict(filepath):
-    result = {}
-    with open(filepath, "r", encoding="utf-8") as f:
-        reader = csv.reader(f, delimiter="\t")
-        for row in reader:
-            key = int(row[0])
+# input: list of qids, output: map of index to list of qids
+def generate_combinations(qids, n):
+    return {
+        i: list(combo)
+        for i, combo in enumerate(combinations(qids, n), start=1)
+    }
 
-            # Split on |
-            choices = row[1].split("|")
-
-            parsed_choices = []
-            for choice in choices:
-                choice = choice.strip()
-                parsed_choices.append(choice)
-
-            result[key] = parsed_choices
-    return result
-
-def get_rand_order(qmap):
+# input: map of index to list of qids, output: map of index to permutation of range(len(qids))
+def get_rand_order(combo_map):
     ordermap = {}
-    for k in qmap:
-        choices = qmap[k]
-        perm_order = list(range(len(choices)))
-        shuffle(perm_order)
-        print(choices)
-        print(perm_order)
-        indiv_qids = [qid_map[choices[i]] for i in perm_order]
-        ordermap[k] = (perm_order, indiv_qids)
+    for k in combo_map:
+        qids = combo_map[k]
+        rand_order = list(range(len(qids)))
+        shuffle(rand_order)
+        indiv_qids = [qids[i] for i in rand_order]
+        ordermap[k] = (rand_order, indiv_qids)
     return ordermap
 
-def get_phase_map(idxs, orders):
-    phases = {
-        "indiv": {
-            "qs": indiv_qs,
-            "template": "indiv_prefs.html",
-            "next": "pairs",
-            "instructions": "instructions.html"
-        },
-        "pairs": {
-            "qs": pairs_qs,
-            "template": "pairs_prefs.html",
-            "next": "rerate",
-            "instructions": "pairs_instructions.html"
-        },
-        "radio": {
-            "qs": radio_qs,
-            "template": "mult_choice.html",
-            "next": "finished",
-            "instructions": "radio_instructions.html"
-        },
-        "rerate": {
-            "qs": indiv_qs,
-            "template": "indiv_prefs.html",
-            "next": "radio",
-            "instructions": "rerate_instructions.html"
-        },
-        "rerate2": {
-            "qs": indiv_qs,
-            "template": "indiv_prefs.html",
-            "next": "finished",
-            "instructions": "rerate_instructions.html"
-        }
-    }
-    for key in idxs:
-        phases[key]["idx"] = idxs[key]
-    for key in orders:
-        phases[key]["order"] = orders[key]
-    return phases
+def update_map(map, phase, field_data):
+    for key in field_data:
+        map[phase][key] = field_data[key]
+    return map
+
+# input: map of qid to rating, map of (qid,qid) to rating, output: map of idx to qids
+def select_radio_items(selected_items, indiv_ratings, pair_ratings, n_items = 32):
+
+    def get_edge_weight(r1, r2, p):
+        return int(p) - 100 * (1 - (1 - int(r1)/200.) * (1 - int(r2)/200.))
+
+    edge_weights = {i: {} for i in selected_items}
+    for qid1, v in pair_ratings.items():
+        for qid2, rating in v.items():
+            edge_weights[qid1][qid2] = get_edge_weight(indiv_ratings[qid1], indiv_ratings[qid2], rating)
+
+    # list of qids, sorted by their rating
+    ranked_items = sorted(selected_items, key = lambda x: indiv_ratings[x], reverse = True)
+
+    candidates = []
+    n = len(ranked_items)
+
+    for i in range(n):
+        A = ranked_items[i]
+        rating_A = indiv_ratings[A]/2.
+
+        for j in range(i+1, n):
+            B = ranked_items[j]
+            rating_B = indiv_ratings[B]/2.
+
+            best_metric, best_C = -100, None
+            best2_metric, best2_C = -100, None
+
+            for k in range(j+1, n):
+                C = ranked_items[k]
+                metric = rating_B + edge_weights[B][C] - rating_A - edge_weights[A][C]
+
+                if metric > best_metric:
+                    best2_metric, best2_C = best_metric, best2_C
+                    best_metric, best_C = metric, C
+                elif metric > best2_metric:
+                    best2_metric, best2_C = metric, C
+
+            if best2_C is not None:
+                candidates.append({"items": [A, B, best_C, best2_C], "metric": best_metric})
+
+    candidates.sort(key = lambda x: x["metric"], reverse = True)
+
+    qs = {}
+    idx = 1
+    for item in candidates[:n_items]:
+        A, B, C, D = item["items"]
+        qs[idx] = [A, B]
+        qs[idx+1] = [A, B, C]
+        qs[idx+2] = [A, B, D]
+        qs[idx+3] = [A, B, C, D]
+        idx += 4
+
+    return qs
+
+
+def get_question_id(prefix, qids):
+    idxs = sorted(rev_qid_map[qid] for qid in qids)
+
+    N = len(rev_qid_map)
+    k = len(idxs)
+
+    rank = 1  # 1-based
+
+    prev = 0
+    for i, idx in enumerate(idxs):
+        for j in range(prev + 1, idx):
+            rank += comb(N - j, k - i - 1)
+        prev = idx
+
+    return f"{prefix}_{k}_{rank}"
+
+
+# currently unused function, but could be useful
+def is_ingroup(qid1, qid2):
+    return qid1.split("_")[0] == qid2.split("_")[0]
     
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -642,6 +620,7 @@ timezone = ZoneInfo(app_settings.get("timestamp_timezone", "UTC"))
 # Tweak settings
 app_settings["exclude_columns"].append("num_stories")
 app_settings["observed_urls"] = tuple(rf"{i}" for i in app_settings["observed_urls"])
+verb = bool(app_settings.get("verbose", 0))
 
 # 4. Parse db_cols_2.json to figure out what data to upload
 try:
@@ -664,13 +643,14 @@ if (not exists(app_settings["data_table"])) and app_settings["auto_create_table"
         )
 
 # 6. Get the questions as a dictionary, where the key is the question number as an int.
-indiv_qs = tsv_to_dict("survey/indiv.txt")
-pairs_qs = multi_tsv_to_dict("survey/pairs.txt")
-radio_qs = multi_tsv_to_dict("survey/radio.txt")
-qid_map = reverse_map(indiv_qs)
+q_map = tsv_to_dict("survey/indiv.txt")
+indiv_qs = {i: text for i, (qid, text) in enumerate(q_map.items(), start = 1)}
+qid_map = {i: qid for i, (qid, text) in enumerate(q_map.items(), start = 1)}
+rev_qid_map = {qid: i for i, qid in qid_map.items()}
 
 # 7. Define the workflow
 submit_timeout_ms = 5000
+require_slider = True
 
 # 8. Connect the 'log_template_renders' callback to the 'template_rendered'
 # signal so the callback executes every time a template is rendered.
@@ -702,72 +682,57 @@ def before_request():
     None.
 
     """
+    if request.endpoint == "static":
+        return
     timestamp = datetime.now(timezone)
+
     referrer = (
-        request.referrer.split(":".join([host_ip, str(host_port)]))[-1]
-        if not request.referrer is None
+        urlparse(request.referrer).path
+        if request.referrer
         else "None"
     )  # The url path from the previous page
     retrival = (
         request.headers["Accept"].split(",")[0] if request.method == "GET" else None
     )  # The content (either html or css) that was downloaded, typically 'text/css' or 'text/html'
 
-    if True:
-        if request.method == "POST":
-            session["trial_end"] = (timestamp, request.path)
-            print(
-                f"[BEFORE, POST] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
-            )
-            print(
-                f"[BEFORE, POST] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}"
-            )
-            if app_settings["data_upload"] and not request.path.startswith(r"/trial/"):
-                print("[BEFORE, POST] Writing to database...")
-                write_to_db(request.form.to_dict())
+    if request.method == "POST":
+        session["trial_end"] = (timestamp, request.path)
+        print(
+            f"[BEFORE, POST] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
+        )
+        print(
+            f"[BEFORE, POST] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}"
+        )
+        if request.path.startswith(r"/instructions") and session["phase"] == "pairs":
+            write_to_db({"selected": session["selected"]})
 
-        elif (
-            request.method == "GET"
-            and retrival != r"text/css"
-            and not referrer == "None"
-            and session["trial_end"][0] is None
-            and not session["trial_start"][0] is None
-        ):
-            session["trial_end"] = (timestamp, referrer)
-            print(
-                f"[BEFORE, GET] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
-            )
-            print(
-                f"[BEFORE, GET] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}, retrieved {retrival}"
-            )
-            if app_settings["data_upload"] and not request.path.startswith(r"/trial/"):
-                print("[BEFORE, GET] Writing to database...")
-                write_to_db({})
+        elif app_settings["data_upload"]:
+            print("[BEFORE, POST] Writing to database...")
+            write_to_db(request.form.to_dict())
+
+    elif (
+        request.method == "GET"
+        and retrival != r"text/css"
+        and not referrer == "None"
+        and session["trial_end"][0] is None
+        and not session["trial_start"][0] is None
+    ):
+        session["trial_end"] = (timestamp, referrer)
+        print(
+            f"[BEFORE, GET] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
+        )
+        print(
+            f"[BEFORE, GET] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}, retrieved {retrival}"
+        )
+        if app_settings["data_upload"] and not request.path.startswith(r"/trial/"):
+            print("[BEFORE, GET] Writing to database...")
+            write_to_db({})
 
 
 # Login
 @app.route("/", methods=["GET", "POST"])
 # @limiter.limit()
 def login():
-    """
-    This page will simply handle retreiving user data and setting up a user
-    session once the "Log in" button is pressed. Once an answer is submitted
-    via POST, the response is evaluated to make sure it is an ID number. If
-    the number is not found within the local filesystem, the app will attempt
-    to connect to the database to import the data associated with that ID,
-    otherwise the data will be retrieved from the local filesystem. Once data
-    is imported, the starting story index is determined (either from the local
-    user data or the database), and the next story is determined from the story
-    order list.
-    Flash messages are used here to spawn an alert box at the top of the page
-    (included in login.html from message.html using Jinja templates) with the
-    purpose of alerting the user of anything important that may need their
-    attention to contribute to app responsiveness.
-    Redirects to:
-        Itself, if log in fails
-        /choose_stories, if the story order list needs to be reformated from
-            the legacy format.
-        /states, if login is successful
-    """
     session.clear()
     excluded = app_settings["exclude_columns"]
     if request.method == "POST":
@@ -776,25 +741,23 @@ def login():
             if not set_session_params(
                 data=list(data_cols.keys()),
                 op="set/reset",
-                verbose=bool(app_settings.get("verbose", 0)),
+                verbose=verb,
             ):
                 flash("Could not initialize a session for user.", "danger")
-                redirect("/new")
+                redirect(url_for("login"))
 
             # Create a new id
-            print(session.get("subjectidnumber", None))
             if session.get("subjectidnumber", None) is None:
                 new_id = get_new_id(reference_from=app_settings["unique_ids_from"])
                 print(f"\nCreated user ID: {str(new_id)}.\n")
+                rand_num = randint(10**8, (10**9) - 1)
 
-            rand_num = randint(10**8, (10**9) - 1)
             # Save to session
             set_session_params(
                 data={"subjectidnumber": new_id, "rand_num": rand_num, "phase": "register"},
                 op="update",
-                verbose=bool(app_settings.get("verbose", 0)),
+                verbose=verb,
             )
-            # return redirect("/new")
             return redirect(url_for("consent"))
 
     return render_template("start_age_gate.html")
@@ -803,180 +766,201 @@ def login():
 # Consent form
 @app.route("/consent", methods=["GET", "POST"])
 def consent():
-    """
-    Use will be routed here upon pressing the "I'm a new participant" button
-    in the login page.
-    This page includes a consent form which asks for the participant's name,
-    participant's initials, and, if applicable, the initials of whomever is
-    obtaining consent in their stead.
-    Inputs are validated upon POST. If inputs are invalid, the page refreshes
-    and a message is displayed on top of the page.
-    """
-
     if request.method == "POST":
-        data = request.form.to_dict()
-        # Validate input: Input must match the following two patterns,
-        # otherwise participant is not allowed to continue.
-        pattern_names = r"^[A-Za-z]+(?:[ -][A-Za-z]+)*$"
-        # Pattern explanation: String must start with one or more letters
-        # and contain 2 or more all-letter-words separated by a hyphen (-)
-        # or a space.
-        pattern_initials = r"\b(?:[A-Z]\.?){2,}\b"
-        # Pattern explanation: String must be two or more capital letters
-        # optionally separated by a period (.).
-        for key, value in data.items():
-            value = value.strip()
-            if key == "lname" and value == "":
-                # Allow empty last name field (some cultures don't include this in their names).
-                data['lname'] = " "
-            elif not value == "" and not bool(re.search(pattern_names, value)):
-                # If the string does not match this pattern for names, check if
-                # it's initials...
-                if not bool(re.search(pattern_initials, value)):
-                    print(
-                        f"Detected non-compliant string in key '{key}' with value '{value}'"
-                    )
-                    flash(
-                        "Name fields must have one or more words containing only letters, separated by either a space or a hyphen (-). Initials fields must be only capital letters optionally separated by a period (.).",
-                        "danger",
-                    )
-                    return render_template("consent_form.html")
-
-        # Check if the file exists
-        if not os.path.exists(
-            os.path.abspath(
-                rf"{os.getcwd()}/graph_data/informed_consent_signed_{session['subjectidnumber']}.pdf"
-            )
-        ):
-            sign_pdf(
-                session.get("subjectidnumber"),
-                f"{data['fname']} {data['lname']}",
-                data["initials"],
-                proxysignature=data["proxyinit"]
-                if not data["proxyinit"] == "" or None
-                else None,
-                stamp_document=True,
-                include_timestamp=True,
-            )
-
         if "continue" in request.form:
+            # if user accidentally goes back to this page, do not reset state and continue to next page
             if "phase_map" in session:
-                return redirect("/new")
-            idxs = {
-                "indiv": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
-                "rerate": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
-                "rerate2": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
-                "pairs": sample(range(1, len(pairs_qs) + 1), len(pairs_qs)),
-                "radio": sample(range(1, len(radio_qs) + 1), len(radio_qs))
+                return redirect(url_for("info"))
+            # if user opts out, return them to the starting page
+            if request.form.to_dict()["value"] == "optout":
+                return redirect(url_for("login"))
+
+            phase_map = {
+                "indiv": {
+                    "qs": indiv_qs,
+                    "q_order": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
+                    "template": "indiv_prefs.html",
+                    "next": "rerate",
+                    "instructions": "instructions.html"
+                },
+                "rerate": {
+                    "qs": indiv_qs,
+                    "q_order": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
+                    "template": "indiv_prefs.html",
+                    "next": "pairs",
+                    "instructions": "rerate_instructions.html"
+                },
+                "pairs": {
+                    "template": "pairs_prefs.html",
+                    "next": "radio",
+                    "instructions": "pairs_instructions.html"
+                },
+                "radio": {
+                    "template": "radio_prefs.html",
+                    "next": "finalrate",
+                    "instructions": "radio_instructions.html"
+                },
+                "finalrate": {
+                    "template": "indiv_prefs.html",
+                    "next": "finished",
+                    "instructions": "finalrate_instructions.html"
+                }
             }
-            orders = {
-                "pairs": get_rand_order(pairs_qs),
-                "radio": get_rand_order(radio_qs)
-            }
-            phase_map = get_phase_map(idxs, orders)
             starting_params = {
                 "phase": "indiv",
                 "question_order": 0,
-                "phase_map": phase_map
+                "phase_map": phase_map,
+                "indiv_ratings": {}
             }
             set_session_params(
-                data=starting_params, op="update", verbose=bool(app_settings.get("verbose", 0))
+                data=starting_params, op="update", verbose=verb
             )
-            return redirect("/new")
-        elif "download" in request.form:
-            path = os.path.abspath(f"{os.getcwd()}/graph_data/{session['subjectidnumber']}")
-            return send_from_directory(
-                path,
-                f"informed_consent_signed_{session['subjectidnumber']}.pdf",
-                as_attachment=True,
-            )
+            return redirect(url_for("info"))
 
     return render_template("consent_form_survey.html")
 
-@app.route("/new", methods=["GET", "POST"])
-def new_participant():
-    excluded = app_settings["exclude_columns"]
-    subjectidnumber = session["subjectidnumber"]
-    print("Subjectidnumber: " + subjectidnumber)
-
+@app.route("/info", methods=["GET", "POST"])
+def info():
     if request.method == "POST":
         args = request.form.to_dict()
-
-        # Update session
-        set_session_params(
-            data=args, op="update", verbose=bool(app_settings.get("verbose", 0))
-        )
-
-        return redirect("/instructions")
-
+        set_session_params(data=args, op="update", verbose=verb)
+        return redirect(url_for("acknowledgement"))
     return render_template("get_demographic_info.html")
+
+@app.route("/acknowledgement", methods=["GET", "POST"])
+def acknowledgement():
+    if request.method == "POST":
+        return redirect(url_for("instructions"))
+    return render_template("pre_instructions.html")
 
 @app.route("/instructions", methods=["GET", "POST"])
 def instructions():
+    if session["phase"] == "pairs":
+        # check to see if questions need to be generated
+        if session["phase_map"]["pairs"].get("qs", None) is None:
+            items = select_indiv_items(session["indiv_ratings"])
+            pair_combos = generate_combinations(items, 2)
+            qs = {i: [q_map[qid] for qid in v] for i, v in pair_combos.items()}
+            option_orders = get_rand_order(pair_combos)
+            pmap = update_map(session["phase_map"], "pairs", 
+                {"qs": qs, "o_order": option_orders, "q_order": sample(range(1, len(qs) + 1), len(qs))})
+            edges = {i: {} for i in items}
+            set_session_params(
+                data = {"phase_map": pmap, "pair_ratings": edges, "selected": items}, 
+                op="update", 
+                verbose=verb
+            )
+    elif session["phase"] == "radio":
+        # check to see if questions need to be generated
+        if session["phase_map"]["radio"].get("qs", None) is None:
+            indiv_ratings = {}
+            mult_combos = select_radio_items(session["selected"], session["indiv_ratings"], session["pair_ratings"])
+            qs = {i: [q_map[qid] for qid in v] for i, v in mult_combos.items()}
+            option_orders = get_rand_order(mult_combos)
+            pmap = update_map(session["phase_map"], "radio", 
+                {"qs": qs, "o_order": option_orders, "q_order": sample(range(1, len(qs) + 1), len(qs))})
+            set_session_params(
+                data = {"phase_map": pmap},
+                op="update",
+                verbose=verb
+            )
+    elif session["phase"] == "finalrate":
+        # check to see if questions need to be generated
+        if session["phase_map"]["finalrate"].get("qs", None) is None:
+            qs = {i: q_map[qid] for i, qid in enumerate(session["selected"], start = 1)}
+            pmap = update_map(session["phase_map"], "finalrate", 
+                {"qs": qs, "q_order": sample(range(1, len(qs) + 1), len(qs))})
+            set_session_params(
+                data = {"phase_map": pmap},
+                op="update",
+                verbose=verb
+            )
     if request.method == "POST":
-        return redirect("/trial")
+        return redirect(url_for("trial_handler"))
     return render_template(session["phase_map"][session["phase"]]["instructions"])
 
 @app.route("/trial", methods=["GET", "POST"])
 def trial_handler():
-    phases = session["phase_map"]
+    phase_map = session["phase_map"]
     phase = session["phase"]
-    qs = phases[phase]["qs"]
-    idxs = phases[phase]["idx"]
-
     idx = int(session["question_order"])
-    question = qs[idxs[idx]]
-    session["question_id"] = phase + "_" + str(idxs[idx])
+
+    qs = phase_map[phase]["qs"]
+    q_order = phase_map[phase]["q_order"]    
+    question = qs[q_order[idx]]
+
+    session["question_phase_id"] = phase + "_phase_" + str(q_order[idx])
 
     shuffled_choices = None
-    if phase == "radio" or phase == "pairs":
-        perm_order = phases[phase]["order"][idxs[idx]][0]
-        shuffled_choices = [question[i] for i in perm_order]
-        session["option_order"] = phases[phase]["order"][idxs[idx]][1]
+    if phase == "indiv" or phase == "rerate":
+        session["question_id"] = qid_map[q_order[idx]]
+    elif phase == "radio" or phase == "pairs":
+        rand_order = phase_map[phase]["o_order"][q_order[idx]][0]
+        shuffled_choices = [question[i] for i in rand_order]
+        session["option_order"] = phase_map[phase]["o_order"][q_order[idx]][1]
+        session["question_id"] = get_question_id(phase, session["option_order"])
+    elif phase == "finalrate":
+        session["question_id"] = session["selected"][q_order[idx]-1]
 
     if request.method == "POST":
-        if (idx + 1 < len(qs)):
+        if phase == "indiv" or phase == "rerate":
+            indiv_rating = request.form.to_dict().get("value")
+            qid = qid_map[q_order[idx]]
+            session["indiv_ratings"][qid] = session["indiv_ratings"].get(qid, 0) + int(indiv_rating)
+        if phase == "pairs":
+            pair = session["option_order"]
+            val = request.form.to_dict().get("value")
+            session["pair_ratings"][pair[0]][pair[1]] = int(val)
+            session["pair_ratings"][pair[1]][pair[0]] = int(val)
+
+        if (idx + 1 < len(qs)):        
             set_session_params(
                 data = {
-                    "phase": phase,
-                    "question_order": idx + 1,
+                    "phase": phase, 
+                    "question_order": idx + 1, 
                     "response": request.form.to_dict()
                 }, 
                 op="update", 
-                verbose=bool(app_settings.get("verbose", 0))
+                verbose=verb
             )
         else:
             set_session_params(
                 data={
-                    "phase": phases[phase]["next"],
+                    "phase": phase_map[phase]["next"],
                     "question_order": 0,
-                    "question_id": None,
                     "response": request.form.to_dict()
                 }, 
                 op="update", 
-                verbose=bool(app_settings.get("verbose", 0))
+                verbose=verb
             )
-            if phases[phase]["next"] == "finished":
-                return redirect("/finished")
+            if phase_map[phase]["next"] == "finished":
+                return redirect(url_for("final_end"))
             else:
-                return redirect("/instructions")
-        return redirect("/trial")
+                return redirect(url_for("instructions"))
+        return redirect(url_for("trial_handler"))
     return render_template(
-        phases[phase]["template"],
+        phase_map[phase]["template"],
         trial_number = idx + 1,
         timeout = submit_timeout_ms,
+        require_slider = require_slider,
         question = question,
         choices = shuffled_choices
     )
 
 
-# Page which appears when user logs into app but has completed all their stories.
 @app.route("/finished", methods=["GET", "POST"])
 def final_end():
-    return render_template(
-        "end_confirm.html",
-        rand_num = session["rand_num"]
-    )
+    try:
+        if "phase" not in session:
+            return redirect(url_for("login"))
+
+        if session["phase_map"]["finalrate"].get("qs", None) is not None:
+            return render_template(
+                "end_confirm.html",
+                rand_num = session["rand_num"]
+            )
+    except:
+        return redirect(url_for("consent"))
 
 
 # -----------------------------------------------------------------------------
@@ -990,7 +974,7 @@ if __name__ == "__main__":
     # isn't given
     argparser.add_argument("-h", "--host", dest="host_ip", default=r"127.0.0.1")
     argparser.add_argument("-p", "--port", dest="host_port", default="5000")
-    argparser.add_argument("-md", "--mode", dest="mode", default="dev")
+    argparser.add_argument("-md", "--mode", dest="mode", default="prod")
     argparser.add_argument("-v", "--verbose", dest="verbose", default="0")
     argparser.add_argument("-th", "--threads", dest="threads", default="4")
     # Now, parse the command line arguments and store the values in the 'args'
@@ -1011,7 +995,7 @@ if __name__ == "__main__":
 
         print("Waitress")
         serve(
-            app, host=host_ip, port=host_port, threads=threads, url_prefix="/humans-app"
+            app, host=host_ip, port=host_port, threads=threads
         )
     elif args.mode == "local":
         host_ip = args.host_ip
