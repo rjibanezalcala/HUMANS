@@ -649,7 +649,7 @@ qid_map = {i: qid for i, (qid, text) in enumerate(q_map.items(), start = 1)}
 rev_qid_map = {qid: i for i, qid in qid_map.items()}
 
 # 7. Define the workflow
-submit_timeout_ms = 5000
+submit_timeout_ms = 4500
 require_slider = True
 
 # 8. Connect the 'log_template_renders' callback to the 'template_rendered'
@@ -831,7 +831,7 @@ def info():
 def acknowledgement():
     if request.method == "POST":
         return redirect(url_for("instructions"))
-    return render_template("pre_instructions.html")
+    return render_template("pre_instructions.html", id_num = session["subjectidnumber"])
 
 @app.route("/instructions", methods=["GET", "POST"])
 def instructions():

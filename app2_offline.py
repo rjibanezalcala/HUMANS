@@ -586,7 +586,7 @@ def info():
 def acknowledgement():
     if request.method == "POST":
         return redirect("/instructions")
-    return render_template("pre_instructions.html")
+    return render_template("pre_instructions.html", id_num = session["subjectidnumber"])
 
 @app.route("/instructions", methods=["GET", "POST"])
 def instructions():

@@ -62,7 +62,7 @@ transport_5	Ride on a subway
 transport_6	Fly on an airplane
 transport_7	Drive for a roadtrip
 transport_8	Be a passenger for a roadtrip
-transport_9	Take a subway
+transport_9	Ride in a horse-drawn carriage
 transport_10	Walk a scenic route
 transport_11	Hike a moderate trail
 transport_12	Ride in an aerial tramway
