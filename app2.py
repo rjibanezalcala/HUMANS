@@ -733,6 +733,8 @@ def before_request():
 @app.route("/", methods=["GET", "POST"])
 # @limiter.limit()
 def login():
+    if "subjectidnumber" in session:
+        return redirect(url_for("consent"))
     session.clear()
     excluded = app_settings["exclude_columns"]
     if request.method == "POST":
@@ -766,6 +768,8 @@ def login():
 # Consent form
 @app.route("/consent", methods=["GET", "POST"])
 def consent():
+    if "phase_map" in session:
+        return redirect(url_for("info"))
     if request.method == "POST":
         if "continue" in request.form:
             # if user accidentally goes back to this page, do not reset state and continue to next page
