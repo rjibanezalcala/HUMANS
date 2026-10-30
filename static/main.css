@@ -347,6 +347,15 @@ input[type="range"].slider-wide {
   width: 100%;
 }
 
+.question-block {
+    text-align: center;
+}
+
+.question-block form {
+    display: inline-block;
+    text-align: left;
+}
+
 /* Buttons */
 .btn-primary {
   /* Alignment */

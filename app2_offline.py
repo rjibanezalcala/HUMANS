@@ -23,6 +23,7 @@ from math import comb, inf
 from random import randint, sample, shuffle
 from secrets import token_hex
 from shutil import copy2
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 ## Custom libraries
@@ -39,6 +40,7 @@ from flask import (
 )
 from flask_session import Session
 from waitress import serve
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # -------------------------- Configure flask session --------------------------
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -53,6 +55,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = token_hex(32)
 app.config["SESSION_PERMANENT"] = False  # Session data is deleted after session expires
 app.config["SESSION_TYPE"] = "filesystem"  # Session data is stored in the host
+app.wsgi_app = ProxyFix(app.wsgi_app, x_prefix=1) # Use relative file paths
 # Initialise the app with server-side sessions to handle user data
 Session(app)
 # -----------------------------------------------------------------------------
@@ -400,14 +403,14 @@ except Exception as e:
 
 
 # 6. Get the questions as a dictionary, where the key is the question number as an int.
-q_map = tsv_to_dict("survey/indiv.txt")
+q_map = tsv_to_dict("survey/indiv_small.txt")
 indiv_qs = {i: text for i, (qid, text) in enumerate(q_map.items(), start = 1)}
 qid_map = {i: qid for i, (qid, text) in enumerate(q_map.items(), start = 1)}
 rev_qid_map = {qid: i for i, qid in qid_map.items()}
 
 # 7. Define the workflow
-submit_timeout_ms = 5
-require_slider = False
+submit_timeout_ms = 1000
+require_slider = True
 
 # 8. Connect the 'log_template_renders' callback to the 'template_rendered'
 # signal so the callback executes every time a template is rendered.
@@ -439,10 +442,12 @@ def before_request():
     None.
 
     """
+    if request.endpoint == "static":
+        return
     timestamp = datetime.now(timezone)
     referrer = (
-        request.referrer.split(":".join([host_ip, str(host_port)]))[-1]
-        if not request.referrer is None
+        urlparse(request.referrer).path
+        if request.referrer
         else "None"
     )  # The url path from the previous page
     retrival = (
@@ -498,7 +503,7 @@ def login():
                 verbose=verb,
             ):
                 flash("Could not initialize a session for user.", "danger")
-                redirect("/new")
+                redirect(url_for("login"))
 
             # Create a new id
             print(session.get("subjectidnumber", None))
@@ -525,10 +530,10 @@ def consent():
         if "continue" in request.form:
             # if user accidentally goes back to this page, do not reset state and continue to next page
             if "phase_map" in session:
-                return redirect("/info")
+                return redirect(url_for("info"))
             # if user opts out, return them to the starting page
             if request.form.to_dict()["value"] == "optout":
-                return redirect("/")
+                return redirect(url_for("login"))
 
             phase_map = {
                 "indiv": {
@@ -570,7 +575,7 @@ def consent():
             set_session_params(
                 data=starting_params, op="update", verbose=verb
             )
-            return redirect("/info")
+            return redirect(url_for("info"))
 
     return render_template("consent_form_survey.html")
 
@@ -579,13 +584,13 @@ def info():
     if request.method == "POST":
         args = request.form.to_dict()
         set_session_params(data=args, op="update", verbose=verb)
-        return redirect("/acknowledgement")
+        return redirect(url_for("acknowledgement"))
     return render_template("get_demographic_info.html")
 
 @app.route("/acknowledgement", methods=["GET", "POST"])
 def acknowledgement():
     if request.method == "POST":
-        return redirect("/instructions")
+        return redirect(url_for("instructions"))
     return render_template("pre_instructions.html", id_num = session["subjectidnumber"])
 
 @app.route("/instructions", methods=["GET", "POST"])
@@ -593,7 +598,7 @@ def instructions():
     if session["phase"] == "pairs":
         # check to see if questions need to be generated
         if session["phase_map"]["pairs"].get("qs", None) is None:
-            items = select_indiv_items(session["indiv_ratings"])
+            items = select_indiv_items(session["indiv_ratings"], 7)
             pair_combos = generate_combinations(items, 2)
             qs = {i: [q_map[qid] for qid in v] for i, v in pair_combos.items()}
             option_orders = get_rand_order(pair_combos)
@@ -609,7 +614,7 @@ def instructions():
         # check to see if questions need to be generated
         if session["phase_map"]["radio"].get("qs", None) is None:
             indiv_ratings = {}
-            mult_combos = select_radio_items(session["selected"], session["indiv_ratings"], session["pair_ratings"])
+            mult_combos = select_radio_items(session["selected"], session["indiv_ratings"], session["pair_ratings"], 4)
             qs = {i: [q_map[qid] for qid in v] for i, v in mult_combos.items()}
             option_orders = get_rand_order(mult_combos)
             pmap = update_map(session["phase_map"], "radio", 
@@ -632,7 +637,7 @@ def instructions():
             )
 
     if request.method == "POST":
-        return redirect("/trial")
+        return redirect(url_for("trial_handler"))
     return render_template(session["phase_map"][session["phase"]]["instructions"])
 
 @app.route("/trial", methods=["GET", "POST"])
@@ -690,10 +695,10 @@ def trial_handler():
                 verbose=verb
             )
             if phase_map[phase]["next"] == "finished":
-                return redirect("/finished")
+                return redirect(url_for("final_end"))
             else:
-                return redirect("/instructions")
-        return redirect("/trial")
+                return redirect(url_for("instructions"))
+        return redirect(url_for("trial_handler"))
     return render_template(
         phase_map[phase]["template"],
         trial_number = idx + 1,
@@ -708,10 +713,11 @@ def trial_handler():
 @app.route("/finished", methods=["GET", "POST"])
 def final_end():
     if request.method == "POST":
-        return redirect("/download_csv")
+        return redirect(url_for("download_csv"))
     return render_template(
         "end_confirm.html",
-        rand_num = session["rand_num"]
+        rand_num = session["rand_num"],
+        show_download_csv = True
     )
 
 @app.route("/download_csv")
@@ -748,7 +754,7 @@ if __name__ == "__main__":
     # isn't given
     argparser.add_argument("-h", "--host", dest="host_ip", default=r"127.0.0.1")
     argparser.add_argument("-p", "--port", dest="host_port", default="5000")
-    argparser.add_argument("-md", "--mode", dest="mode", default="dev")
+    argparser.add_argument("-md", "--mode", dest="mode", default="prod")
     argparser.add_argument("-v", "--verbose", dest="verbose", default="0")
     argparser.add_argument("-th", "--threads", dest="threads", default="4")
     # Now, parse the command line arguments and store the values in the 'args'
@@ -769,7 +775,7 @@ if __name__ == "__main__":
 
         print("Waitress")
         serve(
-            app, host=host_ip, port=host_port, threads=threads, url_prefix="/humans-app"
+            app, host=host_ip, port=host_port, threads=threads
         )
     elif args.mode == "local":
         host_ip = args.host_ip

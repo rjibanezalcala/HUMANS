@@ -14,6 +14,13 @@
 				Please take a screenshot of this page and email <a href="mailto:cnheaton@miners.utep.edu">cnheaton@miners.utep.edu</a> with your screenshot to receive credit for completion.
 			</h2>
 		</div>
+		{% if show_download_csv %}
+		<div class="text-center mt-4">
+            <form method="POST">
+              <input type="submit" id="submitBtn" class="btn btn-primary btn-lg" value="Download CSV">
+            </form>
+        </div>
+        {% endif %}
 	</div>
 </div>
 

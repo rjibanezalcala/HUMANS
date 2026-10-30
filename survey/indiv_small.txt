@@ -1,10 +1,15 @@
 activity_1	Read a book
 activity_2	Put together a 3D model kit
+activity_3	Solve a set of logic puzzles
 comfort_1	Sit in a comfortable recliner
-comfort_2	Have a soft blanket
-food_1	Eat a bowl of mixed berries
-food_2	Drink an ice cold soda
+comfort_6	Wear a plush robe
+comfort_8	Use hand warmers on a cold day
+food_9	Eat a salad
+food_6	Drink a bottle of sparkling water
+food_4	Eat hot salted fries
 listen_1	Listen to gentle background rain
-listen_2	Listen to gentle ocean waves
-transport_1	Ride on a bus
-transport_2	Take a train
+listen_3	Listen to your favorite playlist uninterrupted
+listen_11	Listen to a podcast
+transport_3	Ride a bicycle
+transport_7	Drive for a roadtrip
+transport_12	Ride in an aerial tramway

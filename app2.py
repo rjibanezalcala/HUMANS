@@ -957,7 +957,8 @@ def final_end():
         if session["phase_map"]["finalrate"].get("qs", None) is not None:
             return render_template(
                 "end_confirm.html",
-                rand_num = session["rand_num"]
+                rand_num = session["rand_num"],
+                show_download_csv = False
             )
     except:
         return redirect(url_for("consent"))
