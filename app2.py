@@ -20,7 +20,7 @@ from configparser import ConfigParser as cfgp
 from datetime import datetime
 from itertools import combinations
 from math import comb, inf
-from random import randint, sample, shuffle
+from random import choice, randint, sample, shuffle
 from secrets import token_hex
 from shutil import copy2
 from urllib.parse import urlparse
@@ -466,11 +466,9 @@ def log_template_renders(sender, template, context, **extra):
     # timestamp = timezone.localize(datetime.now())
     timestamp = datetime.now(timezone)
     page = request.path
-    print(f"[SIGNAL.TEMPLATE_RENDERED] Rendered template {template.name or 'string template'} at timestamp {timestamp} in url {page}")
 
     session["trial_start"] = (timestamp, page)
     session["trial_end"] = (None, None)
-    print(f"[SIGNAL.TEMPLATE_RENDERED] Logged 'trial_start'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}")
 
 
 # -----------------------------------------------------------------------------
@@ -480,13 +478,19 @@ def log_template_renders(sender, template, context, **extra):
 
 def tsv_to_dict(filepath):
     result = {}
+    highs = []
+    lows = []
     with open(filepath, "r", encoding="utf-8") as f:
         reader = csv.reader(f, delimiter="\t")
         for row in reader:
             key = row[0]
             value = row[1].strip()
             result[key] = value
-    return result
+            if key.endswith("high"):
+                highs.append(key)
+            elif key.endswith("low"):
+                lows.append(key)
+    return (result, highs, lows)
 
 # select the items that are closest to 50
 def select_indiv_items(ratings, n_items=24):
@@ -588,10 +592,16 @@ def get_question_id(prefix, qids):
 
     return f"{prefix}_{k}_{rank}"
 
+def get_anchor_first_order(qs):
+    a = choice([rev_qid_map[i] for i in high_anchors])
+    b = choice([rev_qid_map[i] for i in low_anchors])
+    start = [a,b]
+    shuffle(start)
 
-# currently unused function, but could be useful
-def is_ingroup(qid1, qid2):
-    return qid1.split("_")[0] == qid2.split("_")[0]
+    remaining = [i for i in range(1, len(qs) + 1) if i not in {a,b}]
+    shuffle(remaining)
+
+    return start + remaining
     
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -643,7 +653,7 @@ if (not exists(app_settings["data_table"])) and app_settings["auto_create_table"
         )
 
 # 6. Get the questions as a dictionary, where the key is the question number as an int.
-q_map = tsv_to_dict("survey/indiv.txt")
+q_map, high_anchors, low_anchors = tsv_to_dict("survey/indiv.txt")
 indiv_qs = {i: text for i, (qid, text) in enumerate(q_map.items(), start = 1)}
 qid_map = {i: qid for i, (qid, text) in enumerate(q_map.items(), start = 1)}
 rev_qid_map = {qid: i for i, qid in qid_map.items()}
@@ -724,16 +734,26 @@ def before_request():
         print(
             f"[BEFORE, GET] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}, retrieved {retrival}"
         )
-        if app_settings["data_upload"] and not request.path.startswith(r"/trial/"):
+        if app_settings["data_upload"]:
             print("[BEFORE, GET] Writing to database...")
             write_to_db({})
 
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = \
+        "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Login
 @app.route("/", methods=["GET", "POST"])
 # @limiter.limit()
 def login():
+    if session.get("state") is not None and session["state"] != "login":
+        return redirect(url_for(session["state"]))
     session.clear()
+    session["state"] = "login"
     excluded = app_settings["exclude_columns"]
     if request.method == "POST":
         if "new_participant" in request.form:
@@ -758,17 +778,20 @@ def login():
                 op="update",
                 verbose=verb,
             )
+            session["state"] = "consent"
             return redirect(url_for("consent"))
 
-    return render_template("start_age_gate.html")
+    return render_template("survey_home.html")
 
 
 # Consent form
 @app.route("/consent", methods=["GET", "POST"])
 def consent():
+    if session.get("state") != "consent":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
         if "continue" in request.form:
-            # if user accidentally goes back to this page, do not reset state and continue to next page
+            # sanity check, should not trigger
             if "phase_map" in session:
                 return redirect(url_for("info"))
             # if user opts out, return them to the starting page
@@ -778,7 +801,7 @@ def consent():
             phase_map = {
                 "indiv": {
                     "qs": indiv_qs,
-                    "q_order": sample(range(1, len(indiv_qs) + 1), len(indiv_qs)),
+                    "q_order": get_anchor_first_order(indiv_qs),
                     "template": "indiv_prefs.html",
                     "next": "rerate",
                     "instructions": "instructions.html"
@@ -815,26 +838,35 @@ def consent():
             set_session_params(
                 data=starting_params, op="update", verbose=verb
             )
+            session["state"] = "info"
             return redirect(url_for("info"))
 
     return render_template("consent_form_survey.html")
 
 @app.route("/info", methods=["GET", "POST"])
 def info():
+    if session.get("state") != "info":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
         args = request.form.to_dict()
         set_session_params(data=args, op="update", verbose=verb)
+        session["state"] = "acknowledgement"
         return redirect(url_for("acknowledgement"))
     return render_template("get_demographic_info.html")
 
 @app.route("/acknowledgement", methods=["GET", "POST"])
 def acknowledgement():
+    if session.get("state") != "acknowledgement":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
+        session["state"] = "instructions"
         return redirect(url_for("instructions"))
     return render_template("pre_instructions.html", id_num = session["subjectidnumber"])
 
 @app.route("/instructions", methods=["GET", "POST"])
 def instructions():
+    if session.get("state") != "instructions":
+        return redirect(url_for(session["state"]))
     if session["phase"] == "pairs":
         # check to see if questions need to be generated
         if session["phase_map"]["pairs"].get("qs", None) is None:
@@ -876,11 +908,14 @@ def instructions():
                 verbose=verb
             )
     if request.method == "POST":
+        session["state"] = "trial_handler"
         return redirect(url_for("trial_handler"))
     return render_template(session["phase_map"][session["phase"]]["instructions"])
 
 @app.route("/trial", methods=["GET", "POST"])
 def trial_handler():
+    if session.get("state") != "trial_handler":
+        return redirect(url_for(session["state"]))
     phase_map = session["phase_map"]
     phase = session["phase"]
     idx = int(session["question_order"])
@@ -928,14 +963,17 @@ def trial_handler():
                 data={
                     "phase": phase_map[phase]["next"],
                     "question_order": 0,
-                    "response": request.form.to_dict()
+                    "response": request.form.to_dict(),
+                    "option_order": None
                 }, 
                 op="update", 
                 verbose=verb
             )
             if phase_map[phase]["next"] == "finished":
+                session["state"] = "final_end"
                 return redirect(url_for("final_end"))
             else:
+                session["state"] = "instructions"
                 return redirect(url_for("instructions"))
         return redirect(url_for("trial_handler"))
     return render_template(
@@ -950,19 +988,24 @@ def trial_handler():
 
 @app.route("/finished", methods=["GET", "POST"])
 def final_end():
-    try:
-        if "phase" not in session:
+    if session.get("state") != "final_end":
+        return redirect(url_for(session["state"]))
+
+    return render_template(
+        "end_confirm.html",
+        rand_num = session["rand_num"],
+        show_download_csv = False
+    )
+
+@app.route("/reset-session", methods=["GET", "POST"])
+def reset_session():
+    if request.method == "POST":
+        if "yes_reset" in request.form:
+            set_session_params({}, "set/reset", verb)
             return redirect(url_for("login"))
-
-        if session["phase_map"]["finalrate"].get("qs", None) is not None:
-            return render_template(
-                "end_confirm.html",
-                rand_num = session["rand_num"],
-                show_download_csv = False
-            )
-    except:
-        return redirect(url_for("consent"))
-
+        elif "no_reset" in request.form:
+            return redirect(url_for(session["state"]))
+    return render_template("reset_session.html")
 
 # -----------------------------------------------------------------------------
 

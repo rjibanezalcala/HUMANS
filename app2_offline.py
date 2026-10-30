@@ -20,7 +20,7 @@ from configparser import ConfigParser as cfgp
 from datetime import datetime
 from itertools import combinations
 from math import comb, inf
-from random import randint, sample, shuffle
+from random import choice, randint, sample, shuffle
 from secrets import token_hex
 from shutil import copy2
 from urllib.parse import urlparse
@@ -357,11 +357,6 @@ def get_question_id(prefix, qids):
 
     return f"{prefix}_{k}_{rank}"
 
-
-# currently unused function, but could be useful
-def is_ingroup(qid1, qid2):
-    return qid1.split("_")[0] == qid2.split("_")[0]
-
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -487,12 +482,22 @@ def before_request():
             print("[BEFORE, GET] Writing to database...")
             write_to_db({})
 
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = \
+        "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Login
 @app.route("/", methods=["GET", "POST"])
 # @limiter.limit()
 def login():
+    if session.get("state") is not None and session["state"] != "login":
+        return redirect(url_for(session["state"]))
     session.clear()
+    session["state"] = "login"
     excluded = app_settings["exclude_columns"]
     if request.method == "POST":
         if "new_participant" in request.form:
@@ -506,7 +511,6 @@ def login():
                 redirect(url_for("login"))
 
             # Create a new id
-            print(session.get("subjectidnumber", None))
             if session.get("subjectidnumber", None) is None:
                 new_id = get_new_id(reference_from=app_settings["unique_ids_from"])
                 print(f"\nCreated user ID: {str(new_id)}.\n")
@@ -518,17 +522,20 @@ def login():
                 op="update",
                 verbose=verb,
             )
+            session["state"] = "consent"
             return redirect(url_for("consent"))
 
-    return render_template("start_age_gate.html")
+    return render_template("survey_home.html")
 
 
 # Consent form
 @app.route("/consent", methods=["GET", "POST"])
 def consent():
+    if session.get("state") != "consent":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
         if "continue" in request.form:
-            # if user accidentally goes back to this page, do not reset state and continue to next page
+            # sanity check, should not trigger
             if "phase_map" in session:
                 return redirect(url_for("info"))
             # if user opts out, return them to the starting page
@@ -575,26 +582,35 @@ def consent():
             set_session_params(
                 data=starting_params, op="update", verbose=verb
             )
+            session["state"] = "info"
             return redirect(url_for("info"))
 
     return render_template("consent_form_survey.html")
 
 @app.route("/info", methods=["GET", "POST"])
 def info():
+    if session.get("state") != "info":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
         args = request.form.to_dict()
         set_session_params(data=args, op="update", verbose=verb)
+        session["state"] = "acknowledgement"
         return redirect(url_for("acknowledgement"))
     return render_template("get_demographic_info.html")
 
 @app.route("/acknowledgement", methods=["GET", "POST"])
 def acknowledgement():
+    if session.get("state") != "acknowledgement":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
+        session["state"] = "instructions"
         return redirect(url_for("instructions"))
     return render_template("pre_instructions.html", id_num = session["subjectidnumber"])
 
 @app.route("/instructions", methods=["GET", "POST"])
 def instructions():
+    if session.get("state") != "instructions":
+        return redirect(url_for(session["state"]))
     if session["phase"] == "pairs":
         # check to see if questions need to be generated
         if session["phase_map"]["pairs"].get("qs", None) is None:
@@ -635,13 +651,15 @@ def instructions():
                 op="update",
                 verbose=verb
             )
-
     if request.method == "POST":
+        session["state"] = "trial_handler"
         return redirect(url_for("trial_handler"))
     return render_template(session["phase_map"][session["phase"]]["instructions"])
 
 @app.route("/trial", methods=["GET", "POST"])
 def trial_handler():
+    if session.get("state") != "trial_handler":
+        return redirect(url_for(session["state"]))
     phase_map = session["phase_map"]
     phase = session["phase"]
     idx = int(session["question_order"])
@@ -689,14 +707,17 @@ def trial_handler():
                 data={
                     "phase": phase_map[phase]["next"],
                     "question_order": 0,
-                    "response": request.form.to_dict()
+                    "response": request.form.to_dict(),
+                    "option_order": None
                 }, 
                 op="update", 
                 verbose=verb
             )
             if phase_map[phase]["next"] == "finished":
+                session["state"] = "final_end"
                 return redirect(url_for("final_end"))
             else:
+                session["state"] = "instructions"
                 return redirect(url_for("instructions"))
         return redirect(url_for("trial_handler"))
     return render_template(
@@ -712,6 +733,8 @@ def trial_handler():
 # Page which appears when user logs into app but has completed all their stories.
 @app.route("/finished", methods=["GET", "POST"])
 def final_end():
+    if session.get("state") != "final_end":
+        return redirect(url_for(session["state"]))
     if request.method == "POST":
         return redirect(url_for("download_csv"))
     return render_template(
@@ -742,6 +765,16 @@ def download_csv():
     ] = f"attachment; filename=participant_{session['subjectidnumber']}.csv"
 
     return response
+
+@app.route("/reset-session", methods=["GET", "POST"])
+def reset_session():
+    if request.method == "POST":
+        if "yes_reset" in request.form:
+            set_session_params({}, "set/reset", verb)
+            return redirect(url_for("login"))
+        elif "no_reset" in request.form:
+            return redirect(url_for(session["state"]))
+    return render_template("reset_session.html")
 
 # -----------------------------------------------------------------------------
 

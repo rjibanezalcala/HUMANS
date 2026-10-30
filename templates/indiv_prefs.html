@@ -2,77 +2,81 @@
 
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-lg-9 col-xl-8">
-        <h6><b>Indicate how much you want this right now, from 0 (not at all) to 100 (a lot).</b></h6>
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-9 col-xl-8">
+            <h6><b>Indicate how much you want this right now, from 0 (not at all) to 100 (a lot).</b></h6>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block button %}
-<div class="row justify-content-center">
-    <div class="col-lg-9 col-xl-8">
-        <div class='center'>
-            <div class="question-block">
-                <h2> {{trial_number}}. {{question}}? </h2>
-            </div>
-
-            <form method = "POST">
-                <div class="slider-block">
-                    <div class="slider slider-narrow">
-                        <input type="range" min="0" max="100" value="50" name="value" oninput="currentValue.textContent = this.value" id="responseSlider">
-
-                        <!-- Slider labels -->
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>Not at all</span>
-                            <span>A lot</span>
-                        </div>
-                        <div class="d-flex justify-content-between small text-secondary mb-4">
-                            <span>0</span>
-                            <span>100</span>
-                        </div>
-
-                        <div style="text-align:center; margin-top:5px;">
-                            Current value: <output id="currentValue">50</output>
-                        </div>
-                    </div>
-
-
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-8">
+            <div class='center'>
+                <div class="question-block">
+                    <h2> {{trial_number}}. {{question}}? </h2>
                 </div>
-                <br> 
-                <input type="submit" class="btn btn-primary" value="Submit" id="submitBtn" disabled>
-            </form>
+
+                <form method = "POST">
+                    <div class="slider-block">
+                        <div class="slider slider-narrow">
+                            <input type="range" min="0" max="100" value="50" name="value" oninput="currentValue.textContent = this.value" id="responseSlider">
+
+                            <!-- Slider labels -->
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Not at all</span>
+                                <span>A lot</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-secondary mb-4">
+                                <span>0</span>
+                                <span>100</span>
+                            </div>
+
+                            <div style="text-align:center; margin-top:5px;">
+                                Current value: <output id="currentValue">50</output>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <br> 
+                    <input type="submit" class="btn btn-primary" value="Submit" id="submitBtn" disabled>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const slider = document.getElementById('responseSlider');
-    const submitBtn = document.getElementById('submitBtn');
+    document.addEventListener('DOMContentLoaded', function () {
+        const slider = document.getElementById('responseSlider');
+        const submitBtn = document.getElementById('submitBtn');
 
-    const defaultValue = slider.value;
+        const defaultValue = slider.value;
 
-    let moved = !{{ require_slider | tojson }};
-    let timerFinished = false;
+        let moved = !{{ require_slider | tojson }};
+        let timerFinished = false;
 
-    function updateButton() {
-        submitBtn.disabled = !(moved && timerFinished);
-    }
-
-    slider.addEventListener('input', function () {
-        if (slider.value !== defaultValue) {
-            moved = true;
-            updateButton();
+        function updateButton() {
+            submitBtn.disabled = !(moved && timerFinished);
         }
+
+        slider.addEventListener('input', function () {
+            if (slider.value !== defaultValue) {
+                moved = true;
+                updateButton();
+            }
+        });
+
+        setTimeout(function () {
+            timerFinished = true;
+            updateButton();
+        }, {{ timeout | tojson }});
+
     });
-
-    setTimeout(function () {
-        timerFinished = true;
-        updateButton();
-    }, {{ timeout | tojson }});
-
-});
 </script>
 
 {% endblock %}

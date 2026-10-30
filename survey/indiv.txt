@@ -10,8 +10,8 @@ activity_9	Solve a mechanical puzzle (e.g. Rubik's cube)
 activity_10	Play a game of solitaire
 activity_11	Learn and practice an origami shape
 activity_12	Learn mathematical principles and their application
-activity_13	Read a phone book cover to cover and take a quiz on its contents
-activity_14	Work on your dream project with limitless resources
+activity_13_low	Read a phone book cover to cover and take a quiz on its contents
+activity_14_high	Work on your dream project with limitless resources
 comfort_1	Sit in a comfortable recliner
 comfort_2	Have a soft blanket
 comfort_3	Walk on heated floors
@@ -24,8 +24,8 @@ comfort_9	Take a warm shower
 comfort_10	Wear a freshly dryed sweater
 comfort_11	Sit next to a warm crackling fireplace
 comfort_12	Curl up on a large couch
-comfort_13	Sit on a freezing, wet metal bench
-comfort_14	Wrap yourself in a heated blanket in a perfectly cozy room
+comfort_13_low	Sit on a freezing, wet metal bench
+comfort_14_high	Wrap yourself in a heated blanket in a perfectly cozy room
 food_1	Eat a bowl of mixed berries
 food_2	Drink an ice cold soda
 food_3	Eat a crisp apple
@@ -38,8 +38,8 @@ food_9	Eat a salad
 food_10	Eat broccoli
 food_11	Eat cauliflower
 food_12	Eat a tomato
-food_13	Drink rancid-smelling chunky milk
-food_14	Enjoy a fresh, delicious gourmet meal
+food_13_low	Drink rancid-smelling chunky milk
+food_14_high	Enjoy a fresh, delicious gourmet meal
 listen_1	Listen to gentle background rain
 listen_2	Listen to gentle ocean waves
 listen_3	Listen to your favorite playlist uninterrupted
@@ -52,8 +52,8 @@ listen_9	Listen to a live classical performance
 listen_10	Listen to smooth jazz
 listen_11	Listen to a podcast
 listen_12	Listen to solo piano music
-listen_13	Listen to screeching fingernails on a chalkboard
-listen_14	Listen to your favorite song on a high-fidelity audio setup
+listen_13_low	Listen to screeching fingernails on a chalkboard
+listen_14_high	Listen to your favorite song on a high-fidelity audio setup
 transport_1	Ride on a bus
 transport_2	Take a train
 transport_3	Ride a bicycle
@@ -66,5 +66,5 @@ transport_9	Ride in a horse-drawn carriage
 transport_10	Walk a scenic route
 transport_11	Hike a moderate trail
 transport_12	Ride in an aerial tramway
-transport_13	Be stuck on an unventilated bus in gridlocked traffic
-transport_14	Ride on a first-class bullet train with nice views
+transport_13_low	Be stuck on an unventilated bus in gridlocked traffic
+transport_14_high	Ride on a first-class bullet train with nice views
