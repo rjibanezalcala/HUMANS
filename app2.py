@@ -545,21 +545,20 @@ def select_radio_items(selected_items, indiv_ratings, pair_ratings, n_items = 32
             B = ranked_items[j]
             rating_B = indiv_ratings[B]/2.
 
-            best_metric, best_C = -100, None
-            best2_metric, best2_C = -100, None
+            best_metric, best_C = -inf, None
+            worst_metric, best_D = inf, None
 
             for k in range(j+1, n):
                 C = ranked_items[k]
                 metric = rating_B + edge_weights[B][C] - rating_A - edge_weights[A][C]
 
                 if metric > best_metric:
-                    best2_metric, best2_C = best_metric, best2_C
                     best_metric, best_C = metric, C
-                elif metric > best2_metric:
-                    best2_metric, best2_C = metric, C
+                if metric < worst_metric:
+                    worst_metric, best_D = metric, C
 
-            if best2_C is not None:
-                candidates.append({"items": [A, B, best_C, best2_C], "metric": best_metric})
+            if best_C is not None and best_C != best_D:
+                candidates.append({"items": [A, B, best_C, best_D], "metric": best_metric})
 
     candidates.sort(key = lambda x: x["metric"], reverse = True)
 
