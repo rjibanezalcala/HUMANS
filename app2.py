@@ -234,22 +234,12 @@ def exists(dest_table):
     return resp[0]
 
 def write_to_db(response):
-    trial_start = session.get("trial_start", (None, None))
-    trial_end = session.get("trial_end", (None, None))
-
-    start_ts = trial_start[0]
-    end_ts = trial_end[0]
-    page = trial_start[1]
+    start_ts, page = session.get("trial_start", (None, None))
+    end_ts, end_page = session.get("trial_end", (None, None))
+    elapsed = None
 
     if start_ts is not None and end_ts is not None:
-        trial_start_str = int(start_ts.timestamp() * 1000)
-        trial_end_str = int(end_ts.timestamp() * 1000)
-        elapsed = trial_end_str - trial_start_str
-        trial_elapsed_str = str(elapsed)
-    else:
-        trial_start_str = None
-        trial_end_str = None
-        trial_elapsed_str = None
+        elapsed = end_ts - start_ts
 
     record = {
         "subjectidnumber": session.get("subjectidnumber"),
@@ -261,9 +251,9 @@ def write_to_db(response):
         "question_display_order": session.get("question_order"),
         "option_display_order": json.dumps(session.get("option_order")),
         "response": json.dumps(response),
-        "trial_start": trial_start_str,
-        "trial_end": trial_end_str,
-        "trial_elapsed": trial_elapsed_str
+        "trial_start": start_ts,
+        "trial_end": end_ts,
+        "trial_elapsed": elapsed
     }
     print("RECORD TO WRITE: " + str(record))
 
@@ -441,35 +431,11 @@ def create_data_table(
 
 
 def log_template_renders(sender, template, context, **extra):
-    """
-    Callback function to execute every time a template is rendered
-    successfully.
-
-    Logs a timestamp when the template was rendered.
-    Timestamp is saved to session only if request.path is in the list of
-    'observed' paths defined in app_settings.
-    ----------
-    sender : Flask object
-        IDK how to describe this lol.
-    template : Template object
-        The template that was rendered.
-    context : DICT
-        A dictionary containing local context. Keys: 'g', 'request', and
-        'session'.
-    **extra : DICT
-        Extra parameters.
-
-    Returns
-    -------
-    None.
-    """
-    # timestamp = timezone.localize(datetime.now())
-    timestamp = datetime.now(timezone)
+    timestamp = int(datetime.now(timezone).timestamp() * 1000)
     page = request.path
 
     session["trial_start"] = (timestamp, page)
     session["trial_end"] = (None, None)
-
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
@@ -693,7 +659,7 @@ def before_request():
     """
     if request.endpoint == "static":
         return
-    timestamp = datetime.now(timezone)
+    timestamp = int(datetime.now(timezone).timestamp() * 1000)
 
     referrer = (
         urlparse(request.referrer).path
@@ -706,12 +672,7 @@ def before_request():
 
     if request.method == "POST":
         session["trial_end"] = (timestamp, request.path)
-        print(
-            f"[BEFORE, POST] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
-        )
-        print(
-            f"[BEFORE, POST] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}"
-        )
+
         if request.path.startswith(r"/instructions") and session["phase"] == "pairs":
             write_to_db({"selected": session["selected"]})
 
@@ -727,12 +688,7 @@ def before_request():
         and not session["trial_start"][0] is None
     ):
         session["trial_end"] = (timestamp, referrer)
-        print(
-            f"[BEFORE, GET] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
-        )
-        print(
-            f"[BEFORE, GET] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}, retrieved {retrival}"
-        )
+
         if app_settings["data_upload"]:
             print("[BEFORE, GET] Writing to database...")
             write_to_db({})
@@ -1000,6 +956,7 @@ def final_end():
 def reset_session():
     if request.method == "POST":
         if "yes_reset" in request.form:
+            write_to_db(session)
             set_session_params({}, "set/reset", verb)
             return redirect(url_for("login"))
         elif "no_reset" in request.form:

@@ -111,22 +111,12 @@ def get_new_id(reference_from="database"):
     return subjectidnumber
 
 def write_to_db(response):
-    trial_start = session.get("trial_start", (None, None))
-    trial_end = session.get("trial_end", (None, None))
-
-    start_ts = trial_start[0]
-    end_ts = trial_end[0]
-    page = trial_start[1]
+    start_ts, page = session.get("trial_start", (None, None))
+    end_ts, end_page = session.get("trial_end", (None, None))
+    elapsed = None
 
     if start_ts is not None and end_ts is not None:
-        trial_start_str = int(start_ts.timestamp() * 1000)
-        trial_end_str = int(end_ts.timestamp() * 1000)
-        elapsed = trial_end_str - trial_start_str
-        trial_elapsed_str = str(elapsed)
-    else:
-        trial_start_str = None
-        trial_end_str = None
-        trial_elapsed_str = None
+        elapsed = end_ts - start_ts
 
     record = {
         "subjectidnumber": session.get("subjectidnumber"),
@@ -138,9 +128,9 @@ def write_to_db(response):
         "question_display_order": session.get("question_order"),
         "option_display_order": json.dumps(session.get("option_order")),
         "response": json.dumps(response),
-        "trial_start": trial_start_str,
-        "trial_end": trial_end_str,
-        "trial_elapsed": trial_elapsed_str
+        "trial_start": start_ts,
+        "trial_end": end_ts,
+        "trial_elapsed": elapsed
     }
     print("RECORD TO WRITE: " + str(record))
 
@@ -233,13 +223,13 @@ def set_session_params(data=None, op="update", exclude=[], verbose=False):
 
 
 def log_template_renders(sender, template, context, **extra):
-    timestamp = datetime.now(timezone)
+    timestamp = int(datetime.now(timezone).timestamp() * 1000)
     page = request.path
     print(f"[SIGNAL.TEMPLATE_RENDERED] Rendered template {template.name or 'string template'} at timestamp {timestamp} in url {page}")
 
     session["trial_start"] = (timestamp, page)
     session["trial_end"] = (None, None)
-    print(f"[SIGNAL.TEMPLATE_RENDERED] Logged 'trial_start'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}")
+    print(f"[SIGNAL.TEMPLATE_RENDERED] Logged 'trial_start'  Start: {str(session['trial_start'])}  End: {str(session['trial_end'])}")
 
 
 # -----------------------------------------------------------------------------
@@ -438,7 +428,7 @@ def before_request():
     """
     if request.endpoint == "static":
         return
-    timestamp = datetime.now(timezone)
+    timestamp = int(datetime.now(timezone).timestamp() * 1000)
     referrer = (
         urlparse(request.referrer).path
         if request.referrer
@@ -451,10 +441,10 @@ def before_request():
     if request.method == "POST":
         session["trial_end"] = (timestamp, request.path)
         print(
-            f"[BEFORE, POST] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
+            f"[BEFORE, POST] Logged 'trial_end'  Start: {str(session['trial_start'])}  End: {str(session['trial_end'])}  Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
         )
         print(
-            f"[BEFORE, POST] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}"
+            f"[BEFORE, POST] Timestamp: {timestamp} on path {request.path}, referred from {referrer}"
         )
         if request.path.startswith(r"/instructions") and session["phase"] == "pairs":
             write_to_db({"selected": session["selected"]})
@@ -472,12 +462,12 @@ def before_request():
     ):
         session["trial_end"] = (timestamp, referrer)
         print(
-            f"[BEFORE, GET] Logged 'trial_end'\n Start: {str(session['trial_start'])}\n End: {str(session['trial_end'])}\n Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
+            f"[BEFORE, GET] Logged 'trial_end' Start: {str(session['trial_start'])}  End: {str(session['trial_end'])}  Elapsed: {str(session['trial_end'][0] - session['trial_start'][0])}"
         )
         print(
-            f"[BEFORE, GET] Timestamp: {timestamp.strftime('%a %b %d %H:%M:%S.%f %Y %Z')} on path {request.path}, referred from {referrer}, retrieved {retrival}"
+            f"[BEFORE, GET] Timestamp: {timestamp} on path {request.path}, referred from {referrer}, retrieved {retrival}"
         )
-        if app_settings["data_upload"] and not request.path.startswith(r"/trial/"):
+        if app_settings["data_upload"]:
             print("[BEFORE, GET] Writing to database...")
             write_to_db({})
 
@@ -769,6 +759,7 @@ def download_csv():
 def reset_session():
     if request.method == "POST":
         if "yes_reset" in request.form:
+            write_to_db(dict(session))
             set_session_params({}, "set/reset", verb)
             return redirect(url_for("login"))
         elif "no_reset" in request.form:
